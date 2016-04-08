@@ -1,8 +1,15 @@
-module Main where
+module Main(main) where
 
-import Lib
+import Graphics.Gloss
+
+window :: Display
+window = InWindow "Nice Window" (200, 200) (10, 10)
+
+background :: Color
+background = white
+
+drawing :: Picture
+drawing = circle 80
 
 main :: IO ()
-main = do
-  s <- getLine
-  putStrLn (someFunc s)
+main = display window background drawing
