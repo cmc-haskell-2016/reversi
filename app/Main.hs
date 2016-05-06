@@ -1,7 +1,7 @@
 module Main where
---import 	Types
-import GameGraphics
---import GameLogic
+
+import LibGraphics
+
 
 main :: IO()
-main = putStrLn "Hi"--gameStart
+main = gameStart
