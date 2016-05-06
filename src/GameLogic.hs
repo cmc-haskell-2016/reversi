@@ -1,4 +1,5 @@
 module GameLogic where
+
 import Types
 
 createWorld :: World
