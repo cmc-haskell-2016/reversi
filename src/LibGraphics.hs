@@ -5,6 +5,8 @@ import GameLogic
 --default library
 import Graphics.Gloss.Interface.Pure.Game
 import Graphics.Gloss
+import System.IO.Unsafe
+import Codec.BMP
 
 gameStart :: IO()
 gameStart = play window background ping initWorld worldToPicture inputEvents step
@@ -29,13 +31,23 @@ ping :: Int
 ping = 10
 
 initWorld :: World
-initWorld = undefined
+initWorld = createWorld
 
 worldToPicture :: World -> Picture
-worldToPicture = undefined
+worldToPicture w = Pictures (createCell 10)
+
+createCell :: Float -> [Picture]
+createCell n| n > 0 = (returnCell (n*10) (n*10)) : (returnCell n n) : [] 			
+			| otherwise = []
+
+returnCell :: Float -> Float ->Picture
+returnCell x y = Translate x y 
+			$ 	unsafePerformIO(loadBMP "data/black.bmp")
 
 inputEvents :: Event -> World -> World
-inputEvents = undefined
+inputEvents  _ w = w
 
 step :: Float -> World -> World
-step = undefined
+step _ w = w
+{-bg <- loadBMP "./images/background3.bmp"
+-}
