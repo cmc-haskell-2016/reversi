@@ -22,10 +22,10 @@ play
 -> IO ()	 
 -}
 window :: Display 
-window = InWindow "reversi" (1000, 800) (0, 0)
+window = InWindow "reversi" (800, 800) (400, 100)
 
 background :: Color
-background = green
+background = blue
 
 ping :: Int
 ping = 10
@@ -34,15 +34,31 @@ initWorld :: World
 initWorld = createWorld
 
 worldToPicture :: World -> Picture
-worldToPicture w = Pictures (createCell 10)
+worldToPicture w = Pictures (createBoard 8 0)--(createCell 10)
 
-createCell :: Float -> [Picture]
-createCell n| n > 0 = (returnCell (n*10) (n*10)) : (returnCell n n) : [] 			
+createBoard :: Int -> Float -> [Picture]
+createBoard n k | n > 0 = (createLine 8 0 k) ++ (createBoard (n-1) (k+35))
+			| otherwise = createLine 8 0 k
+
+createLine :: Int -> Float -> Float -> [Picture]
+createLine n x y | n > 0 = (returnCell x y): (createLine (n-1) (x+35) y)
 			| otherwise = []
 
 returnCell :: Float -> Float ->Picture
-returnCell x y = Translate x y 
-			$ 	unsafePerformIO(loadBMP "data/black.bmp")
+returnCell x y = 
+			Translate x y 
+			$ Scale 0.3 0.3
+			$ unsafePerformIO(loadBMP "data/green.bmp")
+
+createCell :: Float -> [Picture]
+createCell n| n > 0 = (returnCell (n) (n*3)) : (returnCell n n) : (insertText "I'm here"):[] 			
+			| otherwise = []
+
+insertText :: String -> Picture
+insertText w =
+		Scale 0.1 0.1
+		$ Text w
+
 
 inputEvents :: Event -> World -> World
 inputEvents  _ w = w
