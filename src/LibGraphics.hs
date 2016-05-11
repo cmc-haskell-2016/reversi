@@ -34,14 +34,27 @@ initWorld :: World
 initWorld = createWorld
 
 worldToPicture :: World -> Picture
-worldToPicture w = Pictures (createBoard 8 0)--(createCell 10)
+worldToPicture w = Pictures ((insertText "Black"):(createBoard 7 initLocation))
 
 createBoard :: Int -> Float -> [Picture]
-createBoard n k | n > 0 = (createLine 8 0 k) ++ (createBoard (n-1) (k+35))
-			| otherwise = createLine 8 0 k
+createBoard n k | n > 0 = (createLine 8 initLocation k) ++ (createBoard (n-1) (k+offsetY))
+			| otherwise = (createLine 8 initLocation k) ++ (addCheckers (initLocation+3*(offsetX)) (initLocation+3*(offsetY)))
+
+addCheckers :: Float -> Float -> [Picture]
+addCheckers x y = (addBlackChecker x y) :(addWhiteChecker x (y+(offsetY))) :(addWhiteChecker (x+(offsetX)) y) : (addBlackChecker (x+(offsetX)) (y+(offsetY))) :[]
+
+addBlackChecker :: Float -> Float -> Picture
+addBlackChecker x y = Translate x y 
+			$ Scale 0.3 0.3
+			$ unsafePerformIO(loadBMP "data/black.bmp") 
+
+addWhiteChecker :: Float -> Float -> Picture
+addWhiteChecker x y = Translate x y 
+			$ Scale 0.3 0.3
+			$ unsafePerformIO(loadBMP "data/white.bmp") 
 
 createLine :: Int -> Float -> Float -> [Picture]
-createLine n x y | n > 0 = (returnCell x y): (createLine (n-1) (x+35) y)
+createLine n x y | n > 0 = (returnCell x y): (createLine (n-1) (x+offsetX) y)
 			| otherwise = []
 
 returnCell :: Float -> Float ->Picture
@@ -56,7 +69,9 @@ createCell n| n > 0 = (returnCell (n) (n*3)) : (returnCell n n) : (insertText "I
 
 insertText :: String -> Picture
 insertText w =
-		Scale 0.1 0.1
+		Translate (-100.0) (0.0)
+		$ Scale 0.1 0.1
+		$ Color red
 		$ Text w
 
 
