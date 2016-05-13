@@ -9,7 +9,7 @@ import System.IO.Unsafe
 import Codec.BMP
 
 gameStart :: IO()
-gameStart = play window background ping initWorld worldToPicture inputEvents step
+gameStart = play window background ping initWorld worldToPicture handleEvents step
 {-
 play 
 :: Display	Display mode.
@@ -31,14 +31,15 @@ ping :: Int
 ping = 10
 
 initWorld :: World
-initWorld = createWorld
+initWorld = ((initLocation, initLocation), 0)
 
 worldToPicture :: World -> Picture
-worldToPicture w = Pictures ((insertText "Black"):(createBoard 7 initLocation))
+worldToPicture world = Pictures(createBoard 7 world)
+	{-Pictures ((insertText "Black"):(createBoard 7 world))-}
 
-createBoard :: Int -> Float -> [Picture]
-createBoard n k | n > 0 = (createLine 8 initLocation k) ++ (createBoard (n-1) (k+offsetY))
-			| otherwise = (createLine 8 initLocation k) ++ (addCheckers (initLocation+3*(offsetX)) (initLocation+3*(offsetY)))
+createBoard :: Int -> World -> [Picture]
+createBoard n ((x, y), k) | n > 0 = (createLine 8 x y) ++ (createBoard (n-1) ((x, y+offsetY), k))
+			| otherwise = (createLine 8 x y) ++ (addCheckers (initLocation+3*(offsetX)) (initLocation+3*(offsetY)))
 
 addCheckers :: Float -> Float -> [Picture]
 addCheckers x y = (addBlackChecker x y) :(addWhiteChecker x (y+(offsetY))) :(addWhiteChecker (x+(offsetX)) y) : (addBlackChecker (x+(offsetX)) (y+(offsetY))) :[]
@@ -63,20 +64,17 @@ returnCell x y =
 			$ Scale 0.3 0.3
 			$ unsafePerformIO(loadBMP "data/green.bmp")
 
-createCell :: Float -> [Picture]
-createCell n| n > 0 = (returnCell (n) (n*3)) : (returnCell n n) : (insertText "I'm here"):[] 			
-			| otherwise = []
-
 insertText :: String -> Picture
 insertText w =
-		Translate (-100.0) (0.0)
+		Translate (2*initLocation) (initLocation+10*(offsetX))
 		$ Scale 0.1 0.1
 		$ Color red
 		$ Text w
 
 
-inputEvents :: Event -> World -> World
-inputEvents  _ w = w
+handleEvents :: Event -> World -> World
+handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) _ = ((x, y), 2) 
+handleEvents _ w =	w
 
 step :: Float -> World -> World
 step _ w = w
