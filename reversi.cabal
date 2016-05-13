@@ -5,7 +5,7 @@ description:         Please see README.md
 homepage:            http://github.com/cmc-haskell-2016/reversi#readme
 license:             BSD3
 license-file:        LICENSE
-author:              reversi Team
+author:              A$K Team
 maintainer:          reversi@example.com
 copyright:           2016 reversi Team
 category:            Experimental
@@ -16,9 +16,8 @@ cabal-version:       >=1.10
 library
   ghc-options: -Wall
   hs-source-dirs:      src
-  exposed-modules:     Lib
-  build-depends:       base >= 4.7 && < 5
-                     , gloss
+  exposed-modules:     Lib, Types, LibGraphics, GameLogic 
+  build-depends:       base >= 4.7 && < 5, gloss, bmp
   default-language:    Haskell2010
 
 executable reversi
