@@ -12,3 +12,5 @@ offsetY :: Float
 offsetY = 35.0
 initLocation :: Float
 initLocation = (-100.0)
+eps :: Float
+eps = 10.0

@@ -80,56 +80,15 @@ handleEvents :: Event -> World -> World
 handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) (drawPosMove w))
 handleEvents _ w = w
 
-
-
 move :: Pos -> World -> World
-move p (world, turn) = if (canDraw p world) then ((delX (goMove p world turn)), (turn `mod` 2)+1) 
+move p (world, turn) = if (canDraw p world) then ((delX (reColorLine p (goMove p world turn) turn)), (turn `mod` 2)+1) 
 							else (world, turn)
+
 
 canDraw :: Pos -> [WorldObject] -> Bool
 canDraw p ((p1, state) : xs) = if ((state == 3) && (areal p p1)) then True
 								else (canDraw p xs)
-canDraw p [] = False
-
-onLine :: Pos -> [WorldObject] -> Int -> Bool--если сущ-ет checker с одинаковым цветом
-onLine p ((p1, k) : xs) turn = if (horVertDiag p p1) && (k == turn)	then True
-						else (onLine p xs turn)
-onLine _ _ _ = False
-
-horVertDiag :: Pos -> Pos -> Bool
-horVertDiag (x, y) (x1, y1) = if( 
-								((abs (x1-x)) < eps)  || 
-								((abs $ y1-y) < eps)  || 
-								((abs $ (abs $ x-x1)-(abs $ y-y1)) < eps)
-								)then True
-								else False
-eps :: Float
-eps = 10.0
-
-isNear :: Pos -> [WorldObject] -> Bool--смотрим все 8 сторон, где должен существовать checker
-isNear  (x, y) world = if(  (nearChecker (x-(offsetX), y-(offsetY)) world ) ||
-							(nearChecker (x, y-(offsetY)) world ) ||
-							(nearChecker (x+(offsetX), y-(offsetY)) world ) ||
-							(nearChecker (x-(offsetX), y) world ) ||
-							(nearChecker (x+(offsetX), y) world ) ||
-							(nearChecker (x-(offsetX), y+(offsetY)) world ) ||
-							(nearChecker (x, y+(offsetY)) world ) ||
-							(nearChecker (x+(offsetX), y+(offsetY)) world )) then True
-							else False
-
-nearChecker :: Pos -> [WorldObject] -> Bool 
-nearChecker p ((p1, k) : xs) = if (areal p p1) then 
-									if k /= 0 then True
-									else False
-							   else (nearChecker p xs)
-nearChecker _ _ = False 
-
-notOut :: Pos -> [WorldObject] -> Bool -- сможем ли мы поставить этот элемент в наш Ворлд
-notOut p ((p1, k) : xs) = if (areal p p1) then 
-								if k /= 0 then False
-								else True
-							else (notOut p xs)
-notOut _ _ = False 
+canDraw _ [] = False
 
 goMove :: Pos -> [WorldObject] -> Int -> [WorldObject]
 goMove p ((p1, k) : xs) turn = if ((areal p p1) && ( k == 3)) then ((p1, turn) : xs)
