@@ -75,28 +75,28 @@ handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) w
 handleEvents _ w = w
 
 move :: Pos -> World -> World
-move p (world, turn) = if ((notOut p world) && (canDraw p world turn)) then ((goMove p world turn), ((turn `mod` 2)+1)) 
+move p (world, turn) = if ((notOut p world) && (canDraw p world turn)) then ((goMove p world turn), (turn `mod` 2)+1) 
 							else (world, turn)
 
 canDraw :: Pos -> [WorldObject] -> Int -> Bool
-canDraw p world turn = if (--(isNear p world) &&
+canDraw p world turn = if ((isNear p world) &&
 							(onLine p world turn)) then True
 						else False
 
 onLine :: Pos -> [WorldObject] -> Int -> Bool--если сущ-ет checker с одинаковым цветом
-onLine p ((p1, k) : xs) turn = if ((horVertDiag p p1) && (k == turn)) then True
-								else (onLine p xs turn)
+onLine p ((p1, k) : xs) turn = if (horVertDiag p p1) && (k == turn)	then True
+						else (onLine p xs turn)
 onLine _ _ _ = False
 
 horVertDiag :: Pos -> Pos -> Bool
 horVertDiag (x, y) (x1, y1) = if( 
-								((abs x1-x) < eps) || 
-								((abs y1-y) < eps) || 
-								((abs (abs x-x1)-(abs y-y1)) < eps)
+								((abs (x1-x)) < eps)  || 
+								((abs $ y1-y) < eps)  || 
+								((abs $ (abs $ x-x1)-(abs $ y-y1)) < eps)
 								)then True
 								else False
 eps :: Float
-eps = 0.01*offsetY
+eps = 10.0
 
 isNear :: Pos -> [WorldObject] -> Bool--смотрим все 8 сторон, где должен существовать checker
 isNear  (x, y) world = if(  (nearChecker (x-(offsetX), y-(offsetY)) world ) ||
