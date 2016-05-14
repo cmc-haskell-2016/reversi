@@ -75,16 +75,53 @@ handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) w
 handleEvents _ w = w
 
 move :: Pos -> World -> World
-move p (world, turn) = if(willTurn p world) then ((goMove p world turn), ((turn `mod` 2)+1)) 
+move p (world, turn) = if ((notOut p world) && (canDraw p world turn)) then ((goMove p world turn), ((turn `mod` 2)+1)) 
 							else (world, turn)
-move _ w = w
 
-willTurn :: Pos -> [WorldObject] -> Bool
-willTurn p ((p1, k) : xs) = if (areal p p1) then 
+canDraw :: Pos -> [WorldObject] -> Int -> Bool
+canDraw p world turn = if (--(isNear p world) &&
+							(onLine p world turn)) then True
+						else False
+
+onLine :: Pos -> [WorldObject] -> Int -> Bool--если сущ-ет checker с одинаковым цветом
+onLine p ((p1, k) : xs) turn = if ((horVertDiag p p1) && (k == turn)) then True
+								else (onLine p xs turn)
+onLine _ _ _ = False
+
+horVertDiag :: Pos -> Pos -> Bool
+horVertDiag (x, y) (x1, y1) = if( 
+								((abs x1-x) < eps) || 
+								((abs y1-y) < eps) || 
+								((abs (abs x-x1)-(abs y-y1)) < eps)
+								)then True
+								else False
+eps :: Float
+eps = 0.01*offsetY
+
+isNear :: Pos -> [WorldObject] -> Bool--смотрим все 8 сторон, где должен существовать checker
+isNear  (x, y) world = if(  (nearChecker (x-(offsetX), y-(offsetY)) world ) ||
+							(nearChecker (x, y-(offsetY)) world ) ||
+								(nearChecker (x+(offsetX), y-(offsetY)) world ) ||
+								(nearChecker (x-(offsetX), y) world ) ||
+								(nearChecker (x+(offsetX), y) world ) ||
+								(nearChecker (x-(offsetX), y+(offsetY)) world ) ||
+								(nearChecker (x, y+(offsetY)) world ) ||
+								(nearChecker (x+(offsetX), y+(offsetY)) world )) then True
+							else False
+
+nearChecker :: Pos -> [WorldObject] -> Bool 
+nearChecker p ((p1, k) : xs) = if (areal p p1) then 
+									if k /= 0 then True
+									else False
+							   else (nearChecker p xs)
+nearChecker _ _ = False 
+
+notOut :: Pos -> [WorldObject] -> Bool -- сможем ли мы поставить этот элемент в наш Ворлд
+notOut p ((p1, k) : xs) = if (areal p p1) then 
 								if k /= 0 then False
 								else True
-							else (willTurn p xs)
-willTurn _ _ = False 
+							else (notOut p xs)
+notOut _ _ = False 
 
 goMove :: Pos -> [WorldObject] -> Int -> [WorldObject]
 goMove p ((p1, k) : xs) turn | k == 0 = if (areal p p1) then ((p1, turn) : xs)
@@ -104,4 +141,4 @@ insertText w =
 		$ Scale 0.1 0.1
 		$ Color red
 		$ Text w
--}
+-}	
