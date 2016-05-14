@@ -28,21 +28,31 @@ background :: Color
 background = blue
 
 ping :: Int
-ping = 10
+ping = 1
 
 initWorld :: World
-initWorld = ((initLocation, initLocation), 0)
+initWorld = ((createBoard 7 (initLocation) (initLocation)), 2)
+
+createBoard :: Int -> Float -> Float -> [WorldObject]
+createBoard n x y | n > 0 = (createLine 8 x y) ++ (createBoard (n-1) x (y+(offsetY)))
+				| otherwise = (createLine 8 x y)
+createLine :: Int -> Float -> Float -> [WorldObject]
+createLine n x y | n > 0 = if ((x == initLocation+3*(offsetX) && y == initLocation+3*(offsetY)) || 
+								(x == initLocation+4*(offsetY) && y == initLocation+4*(offsetY))) then ((x, y), 1) : (createLine (n-1) (x+(offsetX)) y) 
+							else 
+								if ((x == initLocation+3*(offsetX) && y == initLocation+4*(offsetY)) || 
+								(x == initLocation+4*(offsetY) && y == initLocation+3*(offsetY))) then ((x, y), 2) : (createLine (n-1) (x+(offsetX)) y) 
+								else ((x, y), 0) : (createLine (n-1) (x+(offsetX)) y)
+				| otherwise = []
 
 worldToPicture :: World -> Picture
-worldToPicture world = Pictures(createBoard 7 world)
-	{-Pictures ((insertText "Black"):(createBoard 7 world))-}
+worldToPicture world = Pictures(boardToPicture world)
 
-createBoard :: Int -> World -> [Picture]
-createBoard n ((x, y), k) | n > 0 = (createLine 8 x y) ++ (createBoard (n-1) ((x, y+offsetY), k))
-			| otherwise = (createLine 8 x y) ++ (addCheckers (initLocation+3*(offsetX)) (initLocation+3*(offsetY)))
-
-addCheckers :: Float -> Float -> [Picture]
-addCheckers x y = (addBlackChecker x y) :(addWhiteChecker x (y+(offsetY))) :(addWhiteChecker (x+(offsetX)) y) : (addBlackChecker (x+(offsetX)) (y+(offsetY))) :[]
+boardToPicture :: World -> [Picture]
+boardToPicture ((((x, y), 0) : xs), k) = (returnCell x y) : (boardToPicture (xs, k))
+boardToPicture ((((x, y), 1) : xs), k) = (addBlackChecker x y) : (boardToPicture (xs, k))
+boardToPicture ((((x, y), 2) : xs), k) = (addWhiteChecker x y) : (boardToPicture (xs, k))
+boardToPicture _ = []
 
 addBlackChecker :: Float -> Float -> Picture
 addBlackChecker x y = Translate x y 
@@ -54,29 +64,44 @@ addWhiteChecker x y = Translate x y
 			$ Scale 0.3 0.3
 			$ unsafePerformIO(loadBMP "data/white.bmp") 
 
-createLine :: Int -> Float -> Float -> [Picture]
-createLine n x y | n > 0 = (returnCell x y): (createLine (n-1) (x+offsetX) y)
-			| otherwise = []
-
-returnCell :: Float -> Float ->Picture
+returnCell :: Float -> Float -> Picture
 returnCell x y = 
 			Translate x y 
 			$ Scale 0.3 0.3
 			$ unsafePerformIO(loadBMP "data/green.bmp")
 
+handleEvents :: Event -> World -> World
+handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) w)
+handleEvents _ w = w
+
+move :: Pos -> World -> World
+move p (world, turn) = if(willTurn p world) then ((goMove p world turn), ((turn `mod` 2)+1)) 
+							else (world, turn)
+move _ w = w
+
+willTurn :: Pos -> [WorldObject] -> Bool
+willTurn p ((p1, k) : xs) = if (areal p p1) then 
+								if k /= 0 then False
+								else True
+							else (willTurn p xs)
+willTurn _ _ = False 
+
+goMove :: Pos -> [WorldObject] -> Int -> [WorldObject]
+goMove p ((p1, k) : xs) turn | k == 0 = if (areal p p1) then ((p1, turn) : xs)
+									else (p1, k) : (goMove p xs turn)
+						| k /= 0 = (p1, k) : (goMove p xs turn)
+						| otherwise = []
+goMove _ w _ = w
+areal :: Pos -> Pos -> Bool
+areal (x1, y1) (x, y) = ((abs (x1-x)) < 0.3*(offsetX) && ((abs (y1-y)) < 0.3*(offsetY)))
+
+step :: Float -> World -> World
+step _ w = w
+{-bg <- loadBMP "./images/background3.bmp"
 insertText :: String -> Picture
 insertText w =
 		Translate (2*initLocation) (initLocation+10*(offsetX))
 		$ Scale 0.1 0.1
 		$ Color red
 		$ Text w
-
-
-handleEvents :: Event -> World -> World
-handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) _ = ((x, y), 2) 
-handleEvents _ w =	w
-
-step :: Float -> World -> World
-step _ w = w
-{-bg <- loadBMP "./images/background3.bmp"
 -}
