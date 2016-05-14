@@ -52,12 +52,18 @@ boardToPicture :: World -> [Picture]
 boardToPicture ((((x, y), 0) : xs), k) = (returnCell x y) : (boardToPicture (xs, k))
 boardToPicture ((((x, y), 1) : xs), k) = (addBlackChecker x y) : (boardToPicture (xs, k))
 boardToPicture ((((x, y), 2) : xs), k) = (addWhiteChecker x y) : (boardToPicture (xs, k))
+boardToPicture ((((x, y), 3) : xs), k) = (addCanMoveChecker x y) : (boardToPicture (xs, k))
 boardToPicture _ = []
 
 addBlackChecker :: Float -> Float -> Picture
 addBlackChecker x y = Translate x y 
 			$ Scale 0.3 0.3
 			$ unsafePerformIO(loadBMP "data/black.bmp") 
+
+addCanMoveChecker :: Float -> Float -> Picture
+addCanMoveChecker x y = Translate x y 
+			$ Scale 0.3 0.3
+			$ unsafePerformIO(loadBMP "data/canMove.bmp") 
 
 addWhiteChecker :: Float -> Float -> Picture
 addWhiteChecker x y = Translate x y 
@@ -71,17 +77,19 @@ returnCell x y =
 			$ unsafePerformIO(loadBMP "data/green.bmp")
 
 handleEvents :: Event -> World -> World
-handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) w)
+handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) (drawPosMove w))
 handleEvents _ w = w
 
+
+
 move :: Pos -> World -> World
-move p (world, turn) = if ((notOut p world) && (canDraw p world turn)) then ((goMove p world turn), (turn `mod` 2)+1) 
+move p (world, turn) = if (canDraw p world) then ((delX (goMove p world turn)), (turn `mod` 2)+1) 
 							else (world, turn)
 
-canDraw :: Pos -> [WorldObject] -> Int -> Bool
-canDraw p world turn = if ((isNear p world) &&
-							(onLine p world turn)) then True
-						else False
+canDraw :: Pos -> [WorldObject] -> Bool
+canDraw p ((p1, state) : xs) = if ((state == 3) && (areal p p1)) then True
+								else (canDraw p xs)
+canDraw p [] = False
 
 onLine :: Pos -> [WorldObject] -> Int -> Bool--если сущ-ет checker с одинаковым цветом
 onLine p ((p1, k) : xs) turn = if (horVertDiag p p1) && (k == turn)	then True
@@ -101,12 +109,12 @@ eps = 10.0
 isNear :: Pos -> [WorldObject] -> Bool--смотрим все 8 сторон, где должен существовать checker
 isNear  (x, y) world = if(  (nearChecker (x-(offsetX), y-(offsetY)) world ) ||
 							(nearChecker (x, y-(offsetY)) world ) ||
-								(nearChecker (x+(offsetX), y-(offsetY)) world ) ||
-								(nearChecker (x-(offsetX), y) world ) ||
-								(nearChecker (x+(offsetX), y) world ) ||
-								(nearChecker (x-(offsetX), y+(offsetY)) world ) ||
-								(nearChecker (x, y+(offsetY)) world ) ||
-								(nearChecker (x+(offsetX), y+(offsetY)) world )) then True
+							(nearChecker (x+(offsetX), y-(offsetY)) world ) ||
+							(nearChecker (x-(offsetX), y) world ) ||
+							(nearChecker (x+(offsetX), y) world ) ||
+							(nearChecker (x-(offsetX), y+(offsetY)) world ) ||
+							(nearChecker (x, y+(offsetY)) world ) ||
+							(nearChecker (x+(offsetX), y+(offsetY)) world )) then True
 							else False
 
 nearChecker :: Pos -> [WorldObject] -> Bool 
@@ -124,13 +132,14 @@ notOut p ((p1, k) : xs) = if (areal p p1) then
 notOut _ _ = False 
 
 goMove :: Pos -> [WorldObject] -> Int -> [WorldObject]
-goMove p ((p1, k) : xs) turn | k == 0 = if (areal p p1) then ((p1, turn) : xs)
+goMove p ((p1, k) : xs) turn = if ((areal p p1) && ( k == 3)) then ((p1, turn) : xs)
 									else (p1, k) : (goMove p xs turn)
-						| k /= 0 = (p1, k) : (goMove p xs turn)
-						| otherwise = []
-goMove _ w _ = w
-areal :: Pos -> Pos -> Bool
-areal (x1, y1) (x, y) = ((abs (x1-x)) < 0.3*(offsetX) && ((abs (y1-y)) < 0.3*(offsetY)))
+goMove _ [] _ = []
+
+delX :: [WorldObject] -> [WorldObject]
+delX ((p, state) : xs) = if (state == 3) then (p, 0) : (delX xs)
+							else (p, state) : (delX xs)
+delX [] = []
 
 step :: Float -> World -> World
 step _ w = w
