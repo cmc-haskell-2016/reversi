@@ -47,10 +47,19 @@ createLine n x y | n > 0 =
 				| otherwise = []
 
 worldToPicture :: World -> Picture
-worldToPicture (world, state, (cntBlack, cntWhite)) = 
-	Pictures((insertText (2*initLocation) (initLocation+8*(offsetX)) "White" cntWhite) :
-	(insertText (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
-	boardToPicture (world, state, (cntBlack, cntWhite)) )
+worldToPicture (world, state, (cntBlack, cntWhite)) 
+	| state == 1 = 
+		Pictures(
+		(insertText (2*initLocation) (initLocation+12*(offsetX)) "Black's move") :
+		(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
+		(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
+		boardToPicture (world, state, (cntBlack, cntWhite)) )
+	| otherwise = 
+		Pictures(
+		(insertText (2*initLocation) (initLocation+12*(offsetX)) "White's move") :
+		(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
+		(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
+		boardToPicture (world, state, (cntBlack, cntWhite)) )
 
 boardToPicture :: World -> [Picture]
 boardToPicture ((((x, y), 0) : xs), k,cnt) = (returnCell x y) : (boardToPicture (xs, k,cnt))
@@ -88,18 +97,26 @@ move :: Pos -> World -> World
 move p (world, turn, (cntB, cntW)) = 
 	if (canDraw p world) then 
 		if (turn == 2) then (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB+1,cntW))) ((turn `mod` 2)+1)  )) 
-		else  (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB,cntW+1))) ((turn `mod` 2)+1)  )) 
-	else (world, turn, (cntB, cntW))
+		else  (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB,cntW+1))) ((turn `mod` 2)+1))) 
+	else 
+		if(noMove world) then (world, (turn `mod` 2)+1, (cntB, cntW))
+		else (world, turn, (cntB, cntW))
+
+noMove :: [WorldObject] -> Bool -- проверяет, остались ли возможные ходы, если нет, то передаем ход
+noMove ((p, state) : xs) = 
+	if(state == 3) then False
+	else (noMove xs)
+noMove [] = True
 
 changeTurn :: World -> Int -> World
 changeTurn (x, _, p) turn = (x, turn, p)
 
-canDraw :: Pos -> [WorldObject] -> Bool
+canDraw :: Pos -> [WorldObject] -> Bool -- выбрал ли игрок, позицию куда можно ходить?
 canDraw p ((p1, state) : xs) = if ((state == 3) && (areal p p1)) then True
 								else (canDraw p xs)
 canDraw _ [] = False
 
-goMove :: Pos -> [WorldObject] -> Int -> [WorldObject]
+goMove :: Pos -> [WorldObject] -> Int -> [WorldObject] -- помечаем выбранную игроком позицию
 goMove p ((p1, k) : xs) turn = if ((areal p p1) && ( k == 3)) then ((p1, turn) : xs)
 									else (p1, k) : (goMove p xs turn)
 goMove _ [] _ = []
@@ -115,9 +132,16 @@ delX [] = []
 step :: Float -> World -> World
 step _ w = w
 {-bg <- loadBMP "./images/background3.bmp"-}
-insertText :: Float -> Float -> String -> Int -> Picture
-insertText x y w cnt =
+insertTextNumb :: Float -> Float -> String -> Int -> Picture
+insertTextNumb x y w cnt  =
 		Translate x y
-		$ Scale 0.1 0.1
+		$ Scale 0.3 0.3
 		$ Color red
-		$ Text (w ++ " " ++ (show cnt))
+		$ Text $ w ++ " " ++ (show cnt) -- Pictures( (unsafePerformIO(loadBMP "data/black.bmp")) : (Text (show cnt)) : [])
+
+insertText :: Float -> Float -> String -> Picture
+insertText x y w =
+		Translate x y
+		$ Scale 0.4 0.4
+		$ Color white
+		$ Text w
