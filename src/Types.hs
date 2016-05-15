@@ -1,10 +1,11 @@
 module Types where
 
-type World = ([WorldObject], WhichMove)
+type World = ([WorldObject], WhichMove, CountBlackWhite)
 type WorldObject = (Pos, State)
 type WhichMove = Int -- 1 - ход черных, 2- ход белых	
 type Pos = (Float, Float)--position x,y
 type State = Int --0 - empty, 1-black, 2-white
+type CountBlackWhite = (Int, Int)
 
 offsetX :: Float
 offsetX = 35.0

@@ -31,28 +31,32 @@ ping :: Int
 ping = 1
 
 initWorld :: World
-initWorld = ((createBoard 7 (initLocation) (initLocation)), 2)
+initWorld = ((createBoard 7 (initLocation) (initLocation)), 2, (2,2))
 
 createBoard :: Int -> Float -> Float -> [WorldObject]
 createBoard n x y | n > 0 = (createLine 8 x y) ++ (createBoard (n-1) x (y+(offsetY)))
 				| otherwise = (createLine 8 x y)
 createLine :: Int -> Float -> Float -> [WorldObject]
-createLine n x y | n > 0 = if ((x == initLocation+3*(offsetX) && y == initLocation+3*(offsetY)) || 
-								(x == initLocation+4*(offsetY) && y == initLocation+4*(offsetY))) then ((x, y), 1) : (createLine (n-1) (x+(offsetX)) y) 
-							else 
-								if ((x == initLocation+3*(offsetX) && y == initLocation+4*(offsetY)) || 
-								(x == initLocation+4*(offsetY) && y == initLocation+3*(offsetY))) then ((x, y), 2) : (createLine (n-1) (x+(offsetX)) y) 
-								else ((x, y), 0) : (createLine (n-1) (x+(offsetX)) y)
+createLine n x y | n > 0 = 
+	if ((x == initLocation+3*(offsetX) && y == initLocation+3*(offsetY)) || 
+	(x == initLocation+4*(offsetY) && y == initLocation+4*(offsetY))) then ((x, y), 1) : (createLine (n-1) (x+(offsetX)) y) 
+	else 
+		if ((x == initLocation+3*(offsetX) && y == initLocation+4*(offsetY)) || 
+		(x == initLocation+4*(offsetY) && y == initLocation+3*(offsetY))) then ((x, y), 2) : (createLine (n-1) (x+(offsetX)) y) 
+		else ((x, y), 0) : (createLine (n-1) (x+(offsetX)) y)
 				| otherwise = []
 
 worldToPicture :: World -> Picture
-worldToPicture world = Pictures(boardToPicture world)
+worldToPicture (world, state, (cntBlack, cntWhite)) = 
+	Pictures((insertText (2*initLocation) (initLocation+8*(offsetX)) "White" cntWhite) :
+	(insertText (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
+	boardToPicture (world, state, (cntBlack, cntWhite)) )
 
 boardToPicture :: World -> [Picture]
-boardToPicture ((((x, y), 0) : xs), k) = (returnCell x y) : (boardToPicture (xs, k))
-boardToPicture ((((x, y), 1) : xs), k) = (addBlackChecker x y) : (boardToPicture (xs, k))
-boardToPicture ((((x, y), 2) : xs), k) = (addWhiteChecker x y) : (boardToPicture (xs, k))
-boardToPicture ((((x, y), 3) : xs), k) = (addCanMoveChecker x y) : (boardToPicture (xs, k))
+boardToPicture ((((x, y), 0) : xs), k,cnt) = (returnCell x y) : (boardToPicture (xs, k,cnt))
+boardToPicture ((((x, y), 1) : xs), k,cnt) = (addBlackChecker x y) : (boardToPicture (xs, k,cnt))
+boardToPicture ((((x, y), 2) : xs), k,cnt) = (addWhiteChecker x y) : (boardToPicture (xs, k,cnt))
+boardToPicture ((((x, y), 3) : xs), k,cnt) = (addCanMoveChecker x y) : (boardToPicture (xs, k,cnt))
 boardToPicture _ = []
 
 addBlackChecker :: Float -> Float -> Picture
@@ -77,13 +81,18 @@ returnCell x y =
 			$ unsafePerformIO(loadBMP "data/green.bmp")
 
 handleEvents :: Event -> World -> World
-handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = (move (x, y) (drawPosMove w))
+handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) (w,state,cnt) = (move (x, y) (drawPosMove (w, state, cnt)))
 handleEvents _ w = w
 
 move :: Pos -> World -> World
-move p (world, turn) = if (canDraw p world) then ((delX (reColorLine p (goMove p world turn) turn)), (turn `mod` 2)+1) 
-							else (world, turn)
+move p (world, turn, (cntB, cntW)) = 
+	if (canDraw p world) then 
+		if (turn == 2) then (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB+1,cntW))) ((turn `mod` 2)+1)  )) 
+		else  (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB,cntW+1))) ((turn `mod` 2)+1)  )) 
+	else (world, turn, (cntB, cntW))
 
+changeTurn :: World -> Int -> World
+changeTurn (x, _, p) turn = (x, turn, p)
 
 canDraw :: Pos -> [WorldObject] -> Bool
 canDraw p ((p1, state) : xs) = if ((state == 3) && (areal p p1)) then True
@@ -95,6 +104,9 @@ goMove p ((p1, k) : xs) turn = if ((areal p p1) && ( k == 3)) then ((p1, turn) :
 									else (p1, k) : (goMove p xs turn)
 goMove _ [] _ = []
 
+del :: World -> World
+del (w, turn, cnt) = ((delX w), turn, cnt)
+
 delX :: [WorldObject] -> [WorldObject]
 delX ((p, state) : xs) = if (state == 3) then (p, 0) : (delX xs)
 							else (p, state) : (delX xs)
@@ -102,11 +114,10 @@ delX [] = []
 
 step :: Float -> World -> World
 step _ w = w
-{-bg <- loadBMP "./images/background3.bmp"
-insertText :: String -> Picture
-insertText w =
-		Translate (2*initLocation) (initLocation+10*(offsetX))
+{-bg <- loadBMP "./images/background3.bmp"-}
+insertText :: Float -> Float -> String -> Int -> Picture
+insertText x y w cnt =
+		Translate x y
 		$ Scale 0.1 0.1
 		$ Color red
-		$ Text w
--}	
+		$ Text (w ++ " " ++ (show cnt))
