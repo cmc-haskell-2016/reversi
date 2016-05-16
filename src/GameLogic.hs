@@ -31,7 +31,7 @@ checkMove p w turn =
 
 f :: Pos -> Int -> [WorldObject] -> Pos -> [WorldObject] -> [Pos] 
 f (x, y) turn (((x1, y1), state) : xs) (kx, ky) w = 
-	if ((areal (x + (offsetX)*kx, y + (offsetY)*ky) (x1, y1)) && (state /= turn) && (state > 0) && (state < 3)) 
+	if ((areal (x + (offsetX)*kx, y + (offsetY)*ky) )(x1, y1) && (state /= turn) && (state > 0) && (state < 3)) 
 	then (canReturn (x1 + (offsetX)*kx, y1 + (offsetY)*ky) w w turn (kx, ky))
 	else (f (x, y) turn xs (kx, ky) w)
 f _ _ [] _ _ = []
@@ -53,11 +53,11 @@ eqState [] _ = []
 
 -----------------------------------------------------
 reColorLine :: Pos -> World-> World
-reColorLine p (w, turn, cnt) = (reColorCell p (onLine (findPos p w) w turn) (w,turn,cnt))
+reColorLine p (w, turn, cnt) = (reColorCell p (noEmpty (findPos p w) turn w) (w,turn,cnt))
 										
-reColorCell :: Pos -> [Pos] -> World -> World
-reColorCell point (p : ps) (w,state,cnt) = (reColorCell point ps  (countCNT ((changeColor point p (w, state)), state)))
-reColorCell point [] w = w
+reColorCell :: Pos -> [([Pos],Pos)] -> World -> World
+reColorCell p0 (p : ps) (w,state,cnt) = (reColorCell p0 ps  (countCNT ((drawLine p0 p (w, state)), state)))
+reColorCell p0 [] (w,state,cnt) = (w,state,cnt)
 
 countCNT :: ([WorldObject], Int) -> World -- пересчитывет кол-во черных и белых
 countCNT (w, state) = (w, state, (changeCNT w (0, 0)))
@@ -69,17 +69,43 @@ changeCNT ((x,state) : xs) (cntB, cntW)
 	| otherwise =  (changeCNT xs (cntB, cntW))
 changeCNT [] cnt = cnt
 
-changeColor :: Pos -> Pos -> ([WorldObject], Int) -> [WorldObject] -- помечает точки, которые лежат p0 и p1,взависимости от turn
-changeColor p0 p1 (((x,state) : xs), turn) = 
-	if (isbtw p0 p1 (x,state)) then (x, turn) : (changeColor p0 p1 (xs,turn))
-	else (x, state) : (changeColor p0 p1 (xs,turn))
-changeColor _ _ ([], turn) = []
+{-changeColor :: Pos -> ([Pos], Pos) -> ([WorldObject], Int) -> [WorldObject] -- помечает точки, которые лежат p0 и p1,взависимости от turn
+changeColor p0 (p : ps) (w,turn) = (changeColor p0 ps (drawLine p0 p w turn))
+changeColor _ _ (w,_) = w -}
 
-onLine :: [Pos] -> [WorldObject] -> Int -> [Pos] -- возвращает список из тех точек, до которых можно добраться по горизонтали/вертикали/диагонали
-onLine (p : ps) ((p1, state) : xs) turn = 
-	if ((horVertHor p p1) && (turn == state)) then p1 : (onLine (p : ps) xs turn)
-	else (onLine (p : ps) xs turn)
-onLine _ _ _ = []
+drawLine :: Pos -> ([Pos], Pos) -> ([WorldObject],Int) -> [WorldObject]
+drawLine p0 ((p1:ps), k) ((x : xs),turn) = (drawCell p0 p1 k x turn) : (drawLine p0 ((p1:ps), k) (xs,turn))
+drawLine _ _ ([],_) = []
+drawLine _ ([],_) (w,turn) = w
+
+drawCell :: Pos -> Pos -> Pos -> WorldObject -> Int -> WorldObject
+drawCell (x0, y0) (x1, y1) (kx, ky) ((x, y), state) turn = 
+	if(areal (x0, y0) (x1, y1)) then ((x, y), state)
+	else
+		if(areal (x0+kx*offsetX, y0+ky*offsetY) (x, y)) then ((x, y), turn)
+		else (drawCell (x0+kx*offsetX, y0+ky*offsetY) (x1, y1) (kx, ky) ((x, y), state) turn)
+
+noEmpty :: [Pos] -> Int -> [WorldObject] -> [([Pos], Pos)]
+noEmpty (p:ps) turn w = 
+	 ((f2 p turn w (-1, -1) w) , (-1, -1)) : 
+	 ((f2 p turn w (0, -1) w) , (0, -1)) : 
+	 ((f2 p turn w (1, -1) w) , (1, -1)) : 
+	 ((f2 p turn w (-1, 0) w) , (-1, 0)) : 
+	 ((f2 p turn w (1, 0) w) , (1, 0)) : 
+	 ((f2 p turn w (-1, 1) w) , (-1, 1)) : 
+	 ((f2 p turn w (0, 1) w) , (0, 1)) : 
+	 ((f2 p turn w (1, 1) w) , (1, 1)) : []
+noEmpty _ _ _ = []
+
+f2 :: Pos -> Int -> [WorldObject] -> Pos -> [WorldObject] -> [Pos]
+f2 (x0, y0) turn (((x1, y1), state) : xs) (kx, ky) w = 
+	if (areal (x0+kx*(offsetX), y0+ky*(offsetY)) (x1, y1)) then
+		if(turn == state) then (x1, y1):[]
+		else
+			if(state == 0 || state == 3) then []
+			else (f2 (x0+kx*(offsetX), y0+ky*(offsetY)) turn w (kx, ky) w)
+	else (f2 (x0, y0) turn xs (kx, ky) w)
+f2 _ _ [] _ _ = [] 
 
 findPos :: Pos -> [WorldObject] -> [Pos] -- находит точную точку
 findPos p ((p1, state) : xs) = 
@@ -88,7 +114,7 @@ findPos p ((p1, state) : xs) =
 findPos p [] = []
 
 isbtw :: Pos -> Pos -> WorldObject -> Bool -- лежит ли точка между p1 и p0
-isbtw (x0, y0) (x1, y1) ((x, y), state) | (state > 0)&&(state < 3) = 
+isbtw (x0, y0) (x1, y1) ((x, y), state) = 
 	if (((abs $ x0 - x1) < eps) && ((abs $ x0-x) < eps)) then -- vertical
 		if(y0 > y1) then 
 			if(y0 > y && y > y1) then True
@@ -122,10 +148,9 @@ isbtw (x0, y0) (x1, y1) ((x, y), state) | (state > 0)&&(state < 3) =
 						if (x0 > x && x > x1) then True
 						else False 
 			else False		 
-	|otherwise = False
 
 horVertHor :: Pos -> Pos -> Bool -- проверяет, лежат ли 2 точки по горизонтали/вертикали/диагонали
-horVertHor (x, y) (x1, y1) = if (((abs $ x-x1) < eps) || ((abs $ y - y1) < eps) || (abs ((abs $ y-y1)-(abs $ x-x1)) < eps) ) then True
+horVertHor (x, y) (x1, y1) = if(((abs $ x-x1) < eps) || ((abs $ y - y1) < eps) || (abs ((abs $ y-y1)-(abs $ x-x1)) < eps) ) then True
 								else False
 
 areal :: Pos -> Pos -> Bool

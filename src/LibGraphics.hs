@@ -47,19 +47,34 @@ createLine n x y | n > 0 =
 				| otherwise = []
 
 worldToPicture :: World -> Picture
-worldToPicture (world, state, (cntBlack, cntWhite)) 
-	| state == 1 = 
-		Pictures(
-		(insertText (2*initLocation) (initLocation+12*(offsetX)) "Black's move") :
-		(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
-		(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
-		boardToPicture (world, state, (cntBlack, cntWhite)) )
-	| otherwise = 
-		Pictures(
-		(insertText (2*initLocation) (initLocation+12*(offsetX)) "White's move") :
-		(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
-		(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
-		boardToPicture (world, state, (cntBlack, cntWhite)) )
+worldToPicture (world, state, (cntBlack, cntWhite)) =
+		if(cntBlack + cntWhite == 64) then
+			if(cntBlack == cntWhite) then 
+				Pictures(
+				(insertText (2*initLocation) (initLocation+12*(offsetX)) "DRAW") :
+				boardToPicture (world, state, (cntBlack, cntWhite)) )
+			else
+				if(cntWhite > cntBlack) then
+					Pictures(
+					(insertText (2*initLocation) (initLocation+12*(offsetX)) "White wins") :
+					boardToPicture (world, state, (cntBlack, cntWhite)) )
+				else
+					Pictures(
+					(insertText (2*initLocation) (initLocation+12*(offsetX)) "Black wins") :
+					boardToPicture (world, state, (cntBlack, cntWhite)) )
+		else
+			if(state == 1) then 
+				Pictures(
+				(insertText (2*initLocation) (initLocation+12*(offsetX)) "Black") :
+				(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
+				(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
+				boardToPicture (world, state, (cntBlack, cntWhite)) )
+			else
+				Pictures(
+				(insertText (2*initLocation) (initLocation+12*(offsetX)) "White") :
+				(insertTextNumb (2*initLocation + 9*(offsetX)) (initLocation+10*(offsetX)) "White" cntWhite) :
+				(insertTextNumb (2*initLocation) (initLocation+10*(offsetX)) "Black" cntBlack) : 
+				boardToPicture (world, state, (cntBlack, cntWhite)) )
 
 boardToPicture :: World -> [Picture]
 boardToPicture ((((x, y), 0) : xs), k,cnt) = (returnCell x y) : (boardToPicture (xs, k,cnt))
@@ -91,19 +106,19 @@ returnCell x y =
 
 handleEvents :: Event -> World -> World
 handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) (w,state,cnt) = (move (x, y) (drawPosMove (w, state, cnt)))
-handleEvents _ w = w
+handleEvents _ w = (drawPosMove w)
 
 move :: Pos -> World -> World
 move p (world, turn, (cntB, cntW)) = 
 	if (canDraw p world) then 
-		if (turn == 2) then (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB+1,cntW))) ((turn `mod` 2)+1)  )) 
+		if (turn == 2) then (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB+1,cntW))) ((turn `mod` 2)+1))) 
 		else  (del (changeTurn (reColorLine p ((goMove p world turn), turn, (cntB,cntW+1))) ((turn `mod` 2)+1))) 
 	else 
 		if(noMove world) then (world, (turn `mod` 2)+1, (cntB, cntW))
 		else (world, turn, (cntB, cntW))
 
 noMove :: [WorldObject] -> Bool -- проверяет, остались ли возможные ходы, если нет, то передаем ход
-noMove ((p, state) : xs) = 
+noMove ((_, state) : xs) = 
 	if(state == 3) then False
 	else (noMove xs)
 noMove [] = True
@@ -124,7 +139,7 @@ goMove _ [] _ = []
 del :: World -> World
 del (w, turn, cnt) = ((delX w), turn, cnt)
 
-delX :: [WorldObject] -> [WorldObject]
+delX :: [WorldObject] -> [WorldObject] -- удаляем выбранные позиции
 delX ((p, state) : xs) = if (state == 3) then (p, 0) : (delX xs)
 							else (p, state) : (delX xs)
 delX [] = []
@@ -133,15 +148,37 @@ step :: Float -> World -> World
 step _ w = w
 {-bg <- loadBMP "./images/background3.bmp"-}
 insertTextNumb :: Float -> Float -> String -> Int -> Picture
-insertTextNumb x y w cnt  =
+insertTextNumb x y w cnt 
+	| w == "Black" =
 		Translate x y
 		$ Scale 0.3 0.3
-		$ Color red
-		$ Text $ w ++ " " ++ (show cnt) -- Pictures( (unsafePerformIO(loadBMP "data/black.bmp")) : (Text (show cnt)) : [])
-
+		$ Color black
+		$ Text (show cnt) -- Pictures( (unsafePerformIO(loadBMP "data/black.bmp")) : (Text (show cnt)) : [])
+	| otherwise = 
+		Translate x y
+		$ Scale 0.3 0.3
+		$ Color white
+		$ Text (show cnt) -- Pictures( (unsafePerformIO(loadBMP "data/black.bmp")) : (Text (show cnt)) : [])
+		
 insertText :: Float -> Float -> String -> Picture
-insertText x y w =
+insertText x y w 
+	| w == "Black" = 
+		Translate x y
+		$ Scale 0.4 0.4
+		$ Color black
+		$ Text $ w ++ "'s moving"
+	| w == "Black wins" = 
+		Translate x y
+		$ Scale 0.4 0.4
+		$ Color black
+		$ Text $ w
+	| w == "White wins" = 
 		Translate x y
 		$ Scale 0.4 0.4
 		$ Color white
-		$ Text w
+		$ Text $ w
+	| otherwise = 
+		Translate x y
+		$ Scale 0.4 0.4
+		$ Color white
+		$ Text $ w ++ "'s moving"
