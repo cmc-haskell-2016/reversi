@@ -1,17 +1,37 @@
 module Types where
 
-type World = ([WorldObject], WhichMove, CountBlackWhite)
-type WorldObject = (Pos, State)
-type WhichMove = Int -- 1 - ход черных, 2- ход белых	
-type Pos = (Float, Float)--position x,y
-type State = Int --0 - empty, 1-black, 2-white
+-- | asdkfhlsdkfhj
+data World = World
+  { worldCells  :: [Cell]           -- ^ дфывлаофывда
+  , worldPlayer :: Player           -- ^  s;lkfgjs;lfdkgj
+  , worldTotals :: CountBlackWhite  -- ^ ыдаплоыадпло
+  }
+
+type Pos = (Float, Float)
+
+-- | ылопрыфдлвоар
+data Cell = Cell
+  { cellPos   :: Pos      -- ^ sldjfhasdf
+  , cellState :: State    -- ^ skljhfalkjdf
+  }
+
+-- | Состояние клетки игрового поля.
+data State
+  = Empty           -- ^ Пустая клетка.
+  | Player Player   -- ^ Клетка игрока.
+  | PossibleMove    -- ^ Возможный ход.
+
+-- | sdkfjhasdlkfj
 type CountBlackWhite = (Int, Int)
 
-offsetX :: Float
-offsetX = 35.0
-offsetY :: Float
-offsetY = 35.0
+cellWidth, cellHeight :: Float
+cellWidth  = 35
+cellHeight = 35
+
+-- | ?????
 initLocation :: Float
-initLocation = (-100.0)
+initLocation = -100
+
+-- | ???
 eps :: Float
 eps = 10.0
