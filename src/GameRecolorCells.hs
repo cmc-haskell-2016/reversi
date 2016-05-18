@@ -3,14 +3,14 @@ module GameRecolorCells where
 import Types
 -- перекрашивание клеток                
 reColorLine :: Pos -> World-> World
-reColorLine p (World w turn cnt) = (reColorCell p (cellViaDirection p turn w) (World w turn cnt))
+reColorLine p (World w turn cnt prevW) = (reColorCell p (cellViaDirection p turn w) (World w turn cnt prevW))
 -- перекрашивание клеток, по 1 клетке проверяем
 reColorCell :: Pos -> [(Maybe Pos,Pos)] -> World -> World
-reColorCell p0 (p : ps) (World w state cnt) = reColorCell p0 ps  (World (areCellsBetweenP0P1 p0 p w state) state cnt)
+reColorCell p0 (p : ps) (World w state cnt prevW) = reColorCell p0 ps  (World (areCellsBetweenP0P1 p0 p w state) state cnt prevW)
 reColorCell _ [] w = countCNT w
 -- пересчитывет кол-во черных и белых
 countCNT :: World -> World 
-countCNT (World w state _) = (World w state (changeCNT w (0, 0)))
+countCNT (World w state _ prevW) = (World w state (changeCNT w (0, 0)) prevW)
 -- recalculate of total
 changeCNT :: [Cell] -> CountBlackWhite -> CountBlackWhite
 changeCNT ((Cell _ (Player p)) : xs) (cntBlack, cntWhite) = case p of 

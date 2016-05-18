@@ -4,6 +4,7 @@ data World = World
   { worldCells  :: [Cell]           -- ^ клетки
   , worldPlayer :: State            -- ^  состояние клетки
   , worldTotals :: CountBlackWhite  -- ^ кол-во черныз, белых
+  , prevWorld   :: Maybe World      --  храним предыдущий шаг
   }
 -- | собственно "клетка"
 data Cell = Cell
