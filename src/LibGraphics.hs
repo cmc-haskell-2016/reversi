@@ -40,30 +40,25 @@ worldToPicture (World world state (cntBlack, cntWhite) prevW)
     | cntBlack + cntWhite == 64 && (cntBlack == cntWhite) = 
         Pictures(
         (insertText (posToPoint (-3, 7)) "DRAW") :
-        insertBackPic (posToPoint (0, 6)) :
         boardToPicture (World world state (cntBlack, cntWhite) prevW))
     | (cntBlack + cntWhite == 64) && (cntBlack < cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "White wins") :
-        insertBackPic (posToPoint (0, 6)) :
         boardToPicture (World world state (cntBlack, cntWhite) prevW))
     | cntBlack + cntWhite == 64 && (cntBlack > cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "Black wins") :
-        insertBackPic (posToPoint (0, 6)) :
         boardToPicture (World world state (cntBlack, cntWhite) prevW))
     | otherwise = case state of
         Player WhiteMove ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "White") :
-            insertBackPic (posToPoint (0, 6)) :
             (insertTextNumb (posToPoint (-5,5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5,5)) "Black" cntBlack) : 
             boardToPicture (World world state (cntBlack, cntWhite) prevW))
         _ ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "Black") :
-            insertBackPic (posToPoint (0, 6))  :
             (insertTextNumb (posToPoint (-5, 5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5, 5)) "Black" cntBlack) : 
             boardToPicture (World world state (cntBlack, cntWhite) prevW))

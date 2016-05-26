@@ -2,7 +2,7 @@ module Types where
 -- | 
 data World = World
   { worldCells  :: [Cell]           -- ^ клетки
-  , worldPlayer :: State            -- ^  состояние клетки
+  , worldPlayer :: State            -- ^  чей ход
   , worldTotals :: CountBlackWhite  -- ^ кол-во черныз, белых
   , prevWorld   :: Maybe World      --  храним предыдущий шаг
   }
