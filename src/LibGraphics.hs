@@ -16,7 +16,7 @@ gameStart = play window background ping initWorld worldToPicture handleEvents st
         ping = 100
 -- initial World
 initWorld :: World
-initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing)
+initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (0, 0))
 -- create board
 createBoard :: Int -> (Float, Float) -> [Cell]
 createBoard n (x, y)
@@ -36,61 +36,63 @@ createLine n x y
     where (x0, y0) = pointToPos (x, y)
 -- | преобразование внутреннего представления во внешнее
 worldToPicture :: World -> Picture
-worldToPicture (World world state (cntBlack, cntWhite) prevW) 
+worldToPicture (World world state (cntBlack, cntWhite) prevW m) 
     | cntBlack + cntWhite == 64 && (cntBlack == cntWhite) = 
         Pictures(
         (insertText (posToPoint (-3, 7)) "DRAW") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
     | (cntBlack + cntWhite == 64) && (cntBlack < cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "White wins") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
     | cntBlack + cntWhite == 64 && (cntBlack > cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "Black wins") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
     | otherwise = case state of
         Player WhiteMove ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "White") :
             (insertTextNumb (posToPoint (-5,5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5,5)) "Black" cntBlack) : 
-            boardToPicture (World world state (cntBlack, cntWhite) prevW))
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m))
         _ ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "Black") :
             (insertTextNumb (posToPoint (-5, 5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5, 5)) "Black" cntBlack) : 
-            boardToPicture (World world state (cntBlack, cntWhite) prevW))
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m))
 --возвращает список картинок, в зависимости от State 
 boardToPicture :: World -> [Picture]
-boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW)              = (addEmptyChecker  (posToPoint xy)) : (boardToPicture (World xs k cnt prevW))
-boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW) = (addBlackChecker  (posToPoint xy)) : (boardToPicture (World xs k cnt prevW))
-boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW) = (addWhiteChecker (posToPoint xy)) : (boardToPicture (World xs k cnt prevW))
-boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW)       = (addPosChecker  (posToPoint xy)) : (boardToPicture (World xs k cnt prevW))
+boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW m)              = (addEmptyChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
+boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW m) = (addBlackChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
+boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW m) = (addWhiteChecker (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
+boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW m)       = (addPosChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
 boardToPicture _ = []
 --"реагирование" на нажатую кнопку
 handleEvents :: Event -> World -> World
 handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = -- | если нажата левая кнопка мыши
-    move (pointToPos $ (x,y) - initialLocation - (2*cellWidth, 2*cellHeight))  w -- | учитываем начальное смещение, ПОЧЕМУ ИМЕННО ТАК-НЕ ЗНАЮ(метод проб и тычек)
+    move (pointToPos (x,y))  w -- | учитываем начальное смещение, ПОЧЕМУ ИМЕННО ТАК-НЕ ЗНАЮ(метод проб и тычек)
 handleEvents (EventKey (MouseButton RightButton) Down _ _) w = (goToBack w)      -- | переходим на пред шаг
+handleEvents (EventMotion (x, y)) (World cells state count prevW m) = (World cells state count prevW (x, y))     -- | движение мышки
 handleEvents _ w = drawPosToMove w                                               -- | если ничего не нажато, рисуем возможные позиции для хода
+
 -- откат назад
 goToBack :: World -> World
-goToBack (World cell state total Nothing) = (World cell state total Nothing)
-goToBack (World _ _ _ (Just prevW)) = prevW
+goToBack (World cell state total Nothing m) = (World cell state total Nothing m)
+goToBack (World _ _ _ (Just prevW) _) = prevW
 -- | реагирование на нажатую левую кнопку мышки
 move :: Pos -> World -> World
-move p (World cells (Player WhiteMove) count prevW) 
+move p (World cells (Player WhiteMove) count prevW m) 
     | (checkSelectedPos p cells) =                                       -- | игрок выбрал возможный ход?
-        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player WhiteMove) count prevW))))) 
-    | noMove cells = (changeTurn (World cells (Player WhiteMove) count prevW)) -- | если не осталось возможных ходов, передаем ход черным
-    | otherwise = (World cells (Player WhiteMove) count prevW)                 -- | игрок выбрал позицию, куда нельзя ставить
-move p (World cells (Player BlackMove) count prevW) 
+        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player WhiteMove) count prevW m))))) 
+    | noMove cells = (changeTurn (World cells (Player WhiteMove) count prevW m)) -- | если не осталось возможных ходов, передаем ход черным
+    | otherwise = (World cells (Player WhiteMove) count prevW m)                 -- | игрок выбрал позицию, куда нельзя ставить
+move p (World cells (Player BlackMove) count prevW m) 
     | (checkSelectedPos p cells) =                                       -- | игрок выбрал возможный ход?
-        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player BlackMove) count prevW))))) 
-    | noMove cells = (changeTurn (World cells (Player BlackMove) count prevW)) -- | если не осталось возможных ходов, передаем ход белым
-    | otherwise = (World cells (Player BlackMove) count prevW)                 -- | игрок выбрал позицию, куда нельзя ставить
+        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player BlackMove) count prevW m))))) 
+    | noMove cells = (changeTurn (World cells (Player BlackMove) count prevW m)) -- | если не осталось возможных ходов, передаем ход белым
+    | otherwise = (World cells (Player BlackMove) count prevW m)                 -- | игрок выбрал позицию, куда нельзя ставить
 move _ _ = undefined                                                     -- | такого не должно быть
 -- проверяет, остались ли возможные ходы, если нет, то передаем ход
 noMove :: [Cell] -> Bool 
@@ -99,10 +101,10 @@ noMove (_:xs) = (noMove xs)
 noMove [] = True
 -- передаем ход игрока
 changeTurn :: World -> World
-changeTurn (World cell (Player BlackMove) total prevW) = 
-    (World cell (Player WhiteMove) total prevW)
-changeTurn (World cell (Player WhiteMove) total prevW) = 
-    (World cell (Player BlackMove) total prevW)
+changeTurn (World cell (Player BlackMove) total prevW m) = 
+    (World cell (Player WhiteMove) total prevW m)
+changeTurn (World cell (Player WhiteMove) total prevW m) = 
+    (World cell (Player BlackMove) total prevW m)
 changeTurn _ = undefined -- | that's impossible
 -- выбрал ли игрок, позицию куда можно ходить?
 checkSelectedPos :: Pos -> [Cell] -> Bool 
@@ -113,8 +115,8 @@ checkSelectedPos _ [] = False
 -- помечаем, выбранную игроком, позицию
 -- сохраняем пред World
 markChoosedCell :: Pos -> World -> World 
-markChoosedCell p (World cell turn total prevW) = 
-    (World (markCell p cell turn) turn total (Just (World cell turn total prevW)))
+markChoosedCell p (World cell turn total prevW m) = 
+    (World (markCell p cell turn) turn total (Just (World cell turn total prevW m)) m)
 -- помечаем, выбранную игроком, позицию
 markCell :: Pos -> [Cell] -> State ->[Cell] 
 markCell p ((Cell p1 state) : xs) turn
@@ -123,7 +125,7 @@ markCell p ((Cell p1 state) : xs) turn
 markCell _ [] _ = undefined -- | не должно, чтоьы он не нашел
 -- замена позиции, помеченные "крестиком", на пустые
 del :: World -> World
-del (World w turn cnt prevW) = (World (delX w) turn cnt prevW)
+del (World w turn cnt prevW m) = (World (delX w) turn cnt prevW m)
 -- заменяем "возможные ходы" на пустые позиции
 delX :: [Cell] -> [Cell] 
 delX ((Cell p state) : xs) 
@@ -184,22 +186,29 @@ inMidWhite :: (Int, Int) -> Bool
 inMidWhite (x, y) = (x+y==7+2*k) && (x == 3+k || x == 4+k)
     where k = (fst (pointToPos initialLocation))
 -- return Black Picture
-addBlackChecker :: (Float, Float) -> Picture
-addBlackChecker (x, y) = Translate x y
+addBlackChecker :: (Float, Float) -> (Float, Float) -> [Picture]
+addBlackChecker (x, y) m = [Translate (x + 0.5 * cellWidth) (y + 0.5 * cellHeight)
     $ Scale (0.009*cellWidth) (0.009*cellHeight) -- | привязка к ширине и высоте нашего квадратика
-    $ unsafePerformIO(loadBMP "data/black.bmp") 
+    $ unsafePerformIO(loadBMP "data/black.bmp") ] ++ [addMousePolygon (pointToPos (x, y)) (pointToPos m)]
 -- return Possible Move Picture
-addPosChecker :: (Float, Float) -> Picture
-addPosChecker (x, y) = Translate x y
+addPosChecker :: (Float, Float) -> (Float, Float) -> [Picture]
+addPosChecker (x, y) m = [Translate (x + 0.5 * cellWidth) (y + 0.5 * cellHeight)
     $ Scale (0.009*cellWidth) (0.009*cellHeight) -- |почему 0,009? нужно для того, чтобы квадратики не слипались 
-    $ unsafePerformIO(loadBMP "data/canMove.bmp") 
+    $ unsafePerformIO(loadBMP "data/canMove.bmp")] ++ [addMousePolygon (pointToPos (x, y)) (pointToPos m)]
 -- return White Picture
-addWhiteChecker :: (Float, Float) -> Picture
-addWhiteChecker (x, y) = Translate x y
+addWhiteChecker :: (Float, Float) -> (Float, Float) -> [Picture]
+addWhiteChecker (x, y) m = [Translate (x + 0.5 * cellWidth) (y + 0.5 * cellHeight)
     $ Scale (0.009*cellWidth) (0.009*cellHeight) -- | привязка к ширине и высоте нашего квадратика
-    $ unsafePerformIO(loadBMP "data/white.bmp") 
+    $ unsafePerformIO(loadBMP "data/white.bmp")] ++ [addMousePolygon (pointToPos (x, y)) (pointToPos m)]
 -- Return Green Picture
-addEmptyChecker :: (Float, Float) -> Picture
-addEmptyChecker (x, y) = Translate x y
+addEmptyChecker :: (Float, Float) -> (Float, Float) -> [Picture]
+addEmptyChecker (x, y) m = [Translate (x + 0.5 * cellWidth) (y + 0.5 * cellHeight)
     $ Scale (0.009*cellWidth) (0.009*cellHeight) -- | привязка к ширине и высоте нашего квадратика
-    $ unsafePerformIO(loadBMP "data/green.bmp")
+    $ unsafePerformIO(loadBMP "data/green.bmp")] ++ [addMousePolygon (pointToPos (x, y)) (pointToPos m)]
+-- Return red polygon
+addMousePolygon:: Pos -> Pos -> Picture
+addMousePolygon (x1, y1) (x2, y2) | (areal (x1, y1) (x2, y2)) = color (makeColor 1 0 0 0.5) $
+    polygon [(a * cellWidth, b * cellHeight), (a * cellWidth + cellWidth, b * cellHeight), (a * cellWidth + cellWidth, b * cellHeight + cellHeight), (a * cellWidth, b * cellHeight + cellHeight)]
+                                  | otherwise = color (makeColor 0 0 0 0) $ polygon [(0, 0)]
+    where a = fromIntegral (x1) :: Float
+          b = fromIntegral (y1) :: Float

@@ -5,6 +5,7 @@ data World = World
   , worldPlayer :: State            -- ^  чей ход
   , worldTotals :: CountBlackWhite  -- ^ кол-во черныз, белых
   , prevWorld   :: Maybe World      --  храним предыдущий шаг
+  , mouse       :: Point
   }
 -- | собственно "клетка"
 data Cell = Cell
@@ -33,6 +34,8 @@ type Pos = (Int, Int)
 type CntBlack = Int
 -- | кол-во белых клеток
 type CntWhite = Int
+-- | координата курсора мыши
+type Point = (Float, Float)
 -- | вещ х y координату -> целочисл x y
 pointToPos :: (Float, Float) -> (Int, Int)
 pointToPos (x, y) = (floor(x / cellWidth), floor(y / cellHeight))
