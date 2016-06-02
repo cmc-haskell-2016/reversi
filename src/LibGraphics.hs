@@ -208,7 +208,7 @@ addEmptyChecker (x, y) m = [Translate (x + 0.5 * cellWidth) (y + 0.5 * cellHeigh
 -- Return red polygon
 addMousePolygon:: Pos -> Pos -> Picture
 addMousePolygon (x1, y1) (x2, y2) | (areal (x1, y1) (x2, y2)) = color (makeColor 1 0 0 0.5) $
-    polygon [(a * cellWidth, b * cellHeight), (a * cellWidth + cellWidth, b * cellHeight), (a * cellWidth + cellWidth, b * cellHeight + cellHeight), (a * cellWidth, b * cellHeight + cellHeight)]
+    polygon [(a , b), (a + cellWidth, b), (a + cellWidth, b + cellHeight), (a, b + cellHeight)]
                                   | otherwise = color (makeColor 0 0 0 0) $ polygon [(0, 0)]
-    where a = fromIntegral (x1) :: Float
-          b = fromIntegral (y1) :: Float
+    where a = cellWidth * fromIntegral (x1) :: Float
+          b = cellHeight * fromIntegral (y1) :: Float
