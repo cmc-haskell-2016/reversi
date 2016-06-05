@@ -16,7 +16,7 @@ gameStart = play window background ping initWorld worldToPicture handleEvents st
         ping = 100
 -- initial World
 initWorld :: World
-initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (0, 0))
+initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Menu (Nothing, 0) ([], 0))
 -- create board
 createBoard :: Int -> (Float, Float) -> [Cell]
 createBoard n (x, y)
@@ -36,64 +36,95 @@ createLine n x y
     where (x0, y0) = pointToPos (x, y)
 -- | преобразование внутреннего представления во внешнее
 worldToPicture :: World -> Picture
-worldToPicture (World world state (cntBlack, cntWhite) prevW m) 
+worldToPicture (World _ _ _ _ _ Menu _ _) =   -- ^ режим меню
+        pictures[color (makeColor 1 0 0 1) $ polygon [(-200, -200), (200, -200), (200, 200), (-200, 200)]
+                , color (makeColor 1 0 1 1) $ polygon [(-105, 110), (110, 110), (110, 140), (-105, 140)]
+                , menuText (-105, 110) "Start game"
+                , color (makeColor 1 0 1 1) $ polygon [(-160, 60), (170, 60), (170, 90), (-160, 90)]
+                , menuText (-150, 60) "Return to game"
+                , color (makeColor 1 0 1 1) $ polygon [(-100, 10), (115, 10), (115, 40), (-100, 40)]
+                , menuText (-100, 10) "Load game"
+                , color (makeColor 1 0 1 1) $ polygon [(-190, -40), (190, -40), (190, -10), (-190, -10)]
+                , menuText (-190, -40) "View loaded game"]
+worldToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst) 
     | cntBlack + cntWhite == 64 && (cntBlack == cntWhite) = 
         Pictures(
-        (insertText (posToPoint (-3, 7)) "DRAW") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
+        (insertText (posToPoint (-3, 7)) "DRAW") : (textSave svg) :
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst))
     | (cntBlack + cntWhite == 64) && (cntBlack < cntWhite) = 
         Pictures(
-        (insertText (posToPoint (0, 10)) "White wins") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
+        (insertText (posToPoint (0, 10)) "White wins") : (textSave svg) :
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst))
     | cntBlack + cntWhite == 64 && (cntBlack > cntWhite) = 
         Pictures(
-        (insertText (posToPoint (0, 10)) "Black wins") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m))
+        (insertText (posToPoint (0, 10)) "Black wins") : (textSave svg) :
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst))
     | otherwise = case state of
         Player WhiteMove ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "White") :
             (insertTextNumb (posToPoint (-5,5)) "White" cntWhite) :
-            (insertTextNumb (posToPoint (5,5)) "Black" cntBlack) : 
-            boardToPicture (World world state (cntBlack, cntWhite) prevW m))
+            (insertTextNumb (posToPoint (5,5)) "Black" cntBlack) : (textSave svg) :
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst))
         _ ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "Black") :
             (insertTextNumb (posToPoint (-5, 5)) "White" cntWhite) :
-            (insertTextNumb (posToPoint (5, 5)) "Black" cntBlack) : 
-            boardToPicture (World world state (cntBlack, cntWhite) prevW m))
+            (insertTextNumb (posToPoint (5, 5)) "Black" cntBlack) : (textSave svg) :
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst))
+
 --возвращает список картинок, в зависимости от State 
 boardToPicture :: World -> [Picture]
-boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW m)              = (addEmptyChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
-boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW m) = (addBlackChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
-boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW m) = (addWhiteChecker (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
-boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW m)       = (addPosChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m))
+boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW m stg svg stplst)              = (addEmptyChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst))
+boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW m stg svg stplst) = (addBlackChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst))
+boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW m stg svg stplst) = (addWhiteChecker (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst))
+boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW m stg svg stplst)       = (addPosChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst))
 boardToPicture _ = []
+-- | нарисовать текст "Игра сохранена"
+textSave :: (Maybe World, Int) -> Picture
+textSave (Just _, 1) = insertText (posToPoint (-10, 10)) "Game saved"
+textSave _ = polygon[(0, 0)]
 --"реагирование" на нажатую кнопку
 handleEvents :: Event -> World -> World
-handleEvents (EventKey (MouseButton LeftButton) Down _ (x,y)) w = -- | если нажата левая кнопка мыши
-    move (pointToPos (x,y))  w -- | учитываем начальное смещение, ПОЧЕМУ ИМЕННО ТАК-НЕ ЗНАЮ(метод проб и тычек)
-handleEvents (EventKey (MouseButton RightButton) Down _ _) w = (goToBack w)      -- | переходим на пред шаг
-handleEvents (EventMotion (x, y)) (World cells state count prevW m) = (World cells state count prevW (x, y))     -- | движение мышки
-handleEvents _ w = drawPosToMove w                                               -- | если ничего не нажато, рисуем возможные позиции для хода
+handleEvents (EventKey (SpecialKey KeySpace) Down _ _) w 
+	| gamestate w == View = (fst(stepsList w) !! 0){gamestate = Menu} -- | с помощью пробела можно перейти в режим меню
+	| gamestate w == Game = w{gamestate = Menu}
+	| otherwise = w
+handleEvents (EventKey (Char 's') Down _ _) w                                  -- | нажав на "s"
+    | gamestate w == Game = w{savedGame = (Just w{stepsList = stplst}, 1), stepsList = stplst} -- | в режиме игры мы можем сохранить игру 
+    | otherwise = w                                                                            -- | но не в режиме меню
+    where
+        stplstlst = fst(stepsList w)
+        stplst = (stplstlst, length(stplstlst))
+handleEvents (EventKey (MouseButton LeftButton) Down _ (x, y)) w -- | если нажата левая кнопка мыши 
+    | gamestate w == Game = move (pointToPos (x,y))  w           -- | если мы в режиме игры, проверяем какая часть поля нажта
+    | gamestate w == Menu && fst(savedGame w) /= Nothing &&                                                 -- | если игра сохранена
+        x >= -100 && x <= 100 && y >= 10 && y <= 40 = (unJust $ fst (savedGame w)){savedGame = savedGame w} -- | мы можем её загрузить, нажав на "Load game"
+    | gamestate w == Menu && fst(savedGame w) /= Nothing &&                                                 -- | если игра сохранена
+        x >= -190 && x <= 190 && y >= -40 && y <= -10 = (fst(stepsList w) !! (length(fst(stepsList w)) - snd(stepsList w))){gamestate = View, stepsList = stepsList w}
+    | gamestate w == Menu = analyseMenuClic x y w                          -- | если мы в режиме меню, проверяем какая кнопка нажата
+    | otherwise = w
+handleEvents (EventKey (MouseButton RightButton) Down _ _) w = goToBack w   -- | переходим на пред шаг правой кнопкой мыши
+handleEvents (EventMotion (x, y)) w
+    | gamestate w == Menu || gamestate w == Game = w{mouse = (x, y)}  -- | движение мышки
+    | otherwise = w
+handleEvents _ w | gamestate w == Game = drawPosToMove w -- | если ничего не нажато, рисуем возможные позиции для хода в режиме игры
+                 | otherwise = w                         -- | в режиме меню ничего не делаем
 
--- откат назад
+-- | откат назад
 goToBack :: World -> World
-goToBack (World cell state total Nothing m) = (World cell state total Nothing m)
-goToBack (World _ _ _ (Just prevW) _) = prevW
+goToBack (World cell state total prevW m Menu svg stplst) = (World cell state total prevW m Menu svg stplst)
+goToBack (World cell state total Nothing m Game svg stplst) = (World cell state total Nothing m Game svg stplst)
+goToBack (World _ _ _ (Just prevW) _ _ (svg, _) _) = prevW{savedGame = (svg, 0)}
 -- | реагирование на нажатую левую кнопку мышки
 move :: Pos -> World -> World
-move p (World cells (Player WhiteMove) count prevW m) 
-    | (checkSelectedPos p cells) =                                       -- | игрок выбрал возможный ход?
-        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player WhiteMove) count prevW m))))) 
-    | noMove cells = (changeTurn (World cells (Player WhiteMove) count prevW m)) -- | если не осталось возможных ходов, передаем ход черным
-    | otherwise = (World cells (Player WhiteMove) count prevW m)                 -- | игрок выбрал позицию, куда нельзя ставить
-move p (World cells (Player BlackMove) count prevW m) 
-    | (checkSelectedPos p cells) =                                       -- | игрок выбрал возможный ход?
-        (changeTurn (del (reColorLine p (markChoosedCell p (World cells (Player BlackMove) count prevW m))))) 
-    | noMove cells = (changeTurn (World cells (Player BlackMove) count prevW m)) -- | если не осталось возможных ходов, передаем ход белым
-    | otherwise = (World cells (Player BlackMove) count prevW m)                 -- | игрок выбрал позицию, куда нельзя ставить
-move _ _ = undefined                                                     -- | такого не должно быть
+move p w
+    | checkSelectedPos p (worldCells w) =                                       -- | игрок выбрал возможный ход?
+        changeTurn $ del $ reColorLine p $ markChoosedCell p w{savedGame = svg}
+    | noMove (worldCells w) = changeTurn w{savedGame = svg} -- | если не осталось возможных ходов, передаем ход другому
+    | otherwise = w             -- | игрок выбрал позицию, куда нельзя ставить
+    where
+        svg = (fst(savedGame w), 0)
 -- проверяет, остались ли возможные ходы, если нет, то передаем ход
 noMove :: [Cell] -> Bool 
 noMove ((Cell _ PossibleMove) : _) = False
@@ -101,10 +132,10 @@ noMove (_:xs) = (noMove xs)
 noMove [] = True
 -- передаем ход игрока
 changeTurn :: World -> World
-changeTurn (World cell (Player BlackMove) total prevW m) = 
-    (World cell (Player WhiteMove) total prevW m)
-changeTurn (World cell (Player WhiteMove) total prevW m) = 
-    (World cell (Player BlackMove) total prevW m)
+changeTurn (World cell (Player BlackMove) total prevW m stg svg stplst) = 
+    (World cell (Player WhiteMove) total prevW m stg svg stplst)
+changeTurn (World cell (Player WhiteMove) total prevW m stg svg stplst) = 
+    (World cell (Player BlackMove) total prevW m stg svg stplst)
 changeTurn _ = undefined -- | that's impossible
 -- выбрал ли игрок, позицию куда можно ходить?
 checkSelectedPos :: Pos -> [Cell] -> Bool 
@@ -115,8 +146,8 @@ checkSelectedPos _ [] = False
 -- помечаем, выбранную игроком, позицию
 -- сохраняем пред World
 markChoosedCell :: Pos -> World -> World 
-markChoosedCell p (World cell turn total prevW m) = 
-    (World (markCell p cell turn) turn total (Just (World cell turn total prevW m)) m)
+markChoosedCell p (World cell turn total prevW m stg svg stplst) = 
+    (World (markCell p cell turn) turn total (Just (World cell turn total prevW m Game svg stplst)) m stg svg stplst)
 -- помечаем, выбранную игроком, позицию
 markCell :: Pos -> [Cell] -> State ->[Cell] 
 markCell p ((Cell p1 state) : xs) turn
@@ -125,13 +156,24 @@ markCell p ((Cell p1 state) : xs) turn
 markCell _ [] _ = undefined -- | не должно, чтоьы он не нашел
 -- замена позиции, помеченные "крестиком", на пустые
 del :: World -> World
-del (World w turn cnt prevW m) = (World (delX w) turn cnt prevW m)
+del w = w{worldCells = delX (worldCells w), stepsList = stplst}
+    where
+        stplst = (w : fst(stepsList w), snd(stepsList w))
 -- заменяем "возможные ходы" на пустые позиции
-delX :: [Cell] -> [Cell] 
+delX :: [Cell] -> [Cell]
 delX ((Cell p state) : xs) 
     | (isStatePossibleMove state) = (Cell p Empty) : (delX xs)
     | otherwise = (Cell p state) : (delX xs)
 delX [] = []
+-- | нажатие на кнопки меню
+analyseMenuClic :: Float -> Float -> World -> World
+analyseMenuClic x y (World cell player total prevW m _ svg stplst) 
+                    | x >= -105 && x <= 110 && y >= 110 && y <= 140 -- | тут расположена кнопка "Start game"
+                                    = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game svg stplst) -- | новая игра с сохранением
+                    | x >= -160 && x <= 170 && y >= 60 && y <= 90  -- | "Return to game"
+                                    = (World cell player total prevW m Game svg stplst) -- | меняем режим Меню на режим Игра
+                    | otherwise = (World cell player total prevW m Menu svg stplst) -- | не нажата никакая кнопка
+
 -- :D
 step :: Float -> World -> World
 step _ w = w
@@ -172,11 +214,24 @@ insertText (x, y) w
         $ Scale 0.4 0.4
         $ Color white
         $ Text $ w                -- | White wins
+    | w == "Game saved" =
+        Translate x y
+        $ Scale 0.4 0.4
+        $ Color black
+        $ Text $ w
+    | w == "DRAW" =
+        Translate x y
+        $ Scale 0.4 0.4
+        $ Color black
+        $ Text $ w
     | otherwise = 
         Translate x y
         $ Scale 0.4 0.4
         $ Color white
         $ Text $ w ++ "'s moving" -- | White's moving
+-- | Рисуем текст на меню        
+menuText :: (Float,Float) -> String -> Picture
+menuText (x, y) w = Translate x y $ Scale 0.3 0.3 $ Color yellow $ Text w
 -- инициализируем черные клетки в центр
 inMidBlack :: (Int, Int) -> Bool
 inMidBlack (x, y) = x == y && (x == 3+k || x == 4+k)
