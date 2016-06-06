@@ -9,6 +9,7 @@ data World = World
   , gamestate   :: MenuorGame       -- ^ меню или игра
   , savedGame   :: (Maybe World, Int) -- ^ сохранённая игра, 0 или 1
   , stepsList   :: ([World], Int)    -- ^ последовательность действий
+  , viewed      :: Int               -- на каком шаге просмотра мы находимся?
   } deriving Eq
 -- | собственно "клетка"
 data Cell = Cell
@@ -67,4 +68,13 @@ unJust :: Maybe a -> a
 unJust (Just a) = a
 unJust _ = undefined
    
+deleteTail :: [a] -> Int -> Int -> [a]
+deleteTail lst n k | n == k = [(lst !! n)]
+                   | otherwise = (lst !! k) : (deleteTail lst n (k + 1))
+
+deleteHead :: [a] -> Int -> [a]
+deleteHead (x:xs) n |(length (x:xs)) == n = (x:xs)
+					| otherwise = deleteHead xs n
+deleteHead [] n = []
+
 
