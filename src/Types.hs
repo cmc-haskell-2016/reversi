@@ -10,6 +10,7 @@ data World = World
   , savedGame   :: (Maybe World, Int) -- ^ сохранённая игра, 0 или 1
   , stepsList   :: ([World], Int)    -- ^ последовательность действий
   , viewed      :: Int               -- на каком шаге просмотра мы находимся?
+  , botlevel    :: Int               --какой бот против нас (или игрок)
   } deriving Eq
 -- | собственно "клетка"
 data Cell = Cell
@@ -22,7 +23,7 @@ data State
   | Player WhichMove -- ^ Клетка игрока.
   | PossibleMove     -- ^ Возможный ход.
   deriving Eq
-data MenuorGame = Menu | Game | View deriving Eq    -- ^ меню/игра
+data MenuorGame = Menu | Game | MenuBot | View deriving Eq    -- ^ меню/игра
 
 -- ширина и высота клеток
 cellWidth, cellHeight:: Float

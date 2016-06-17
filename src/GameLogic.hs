@@ -3,7 +3,7 @@ module GameLogic where
 import Types
 -- помечает "крестиком" возможные позиции для хода
 drawPosToMove :: World -> World
-drawPosToMove (World w turn cnt prevW m gs svg stplst view) = (World (markCells (retPossibleMove (returnEqToTurn w turn) w turn) w) turn cnt prevW m gs svg stplst view)
+drawPosToMove (World w turn cnt prevW m gs svg stplst view lvl) = (World (markCells (retPossibleMove (returnEqToTurn w turn) w turn) w) turn cnt prevW m gs svg stplst view lvl)
 -- обозначает "крестиком" позиции, куда можно ходить
 markCells :: [Maybe Pos] -> [Cell] -> [Cell] 
 markCells (p1 : xs) w 

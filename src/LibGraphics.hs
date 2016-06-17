@@ -11,12 +11,12 @@ import System.IO.Unsafe
 gameStart :: IO()
 gameStart = play window background ping initWorld worldToPicture handleEvents step
     where
-        window = InWindow "reversi" (800, 800) (250, 0)
+        window = InWindow "Reversi" (800, 800) (250, 0)
         background = blue
         ping = 100
 -- initial World
 initWorld :: World
-initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Menu (Nothing, 0) ([], 0) 0)
+initWorld = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Menu (Nothing, 0) ([], 0) 0 0)
 -- create board
 createBoard :: Int -> (Float, Float) -> [Cell]
 createBoard n (x, y)
@@ -36,7 +36,7 @@ createLine n x y
     where (x0, y0) = pointToPos (x, y)
 -- | преобразование внутреннего представления во внешнее
 worldToPicture :: World -> Picture
-worldToPicture (World _ _ _ _ _ Menu _ _ _) =   -- ^ режим меню
+worldToPicture (World _ _ _ _ _ Menu _ _ _ _) =   -- ^ режим меню
         pictures[color (makeColor 1 0 0 1) $ polygon [(-200, -200), (200, -200), (200, 200), (-200, 200)]
                 , menuText (-60, 160) "MENU"
                 , color (makeColor 1 0 1 1) $ polygon [(-105, 110), (110, 110), (110, 140), (-105, 140)]
@@ -47,39 +47,50 @@ worldToPicture (World _ _ _ _ _ Menu _ _ _) =   -- ^ режим меню
                 , menuText (-100, 10) "Load game"
                 , color (makeColor 1 0 1 1) $ polygon [(-190, -40), (190, -40), (190, -10), (-190, -10)]
                 , menuText (-190, -40) "View loaded game"]
-worldToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view) 
+worldToPicture (World _ _ _ _ _ MenuBot _ _ _ _) =   -- ^ режим выбора противника
+        pictures[color (makeColor 1 0 0 1) $ polygon [(-200, -100), (200, -100), (200, 200), (-200, 200)]
+                , menuText (-100, 160) "Opponent"
+                , color (makeColor 1 0 1 1) $ polygon [(-105, 110), (115, 110), (115, 140), (-105, 140)]
+                , menuText (-105, 110) "2nd player"
+                , color (makeColor 1 0 1 1) $ polygon [(-105, 60), (115, 60), (115, 90), (-105, 90)]
+                , menuText (-105, 60) "Easy bot"
+                , color (makeColor 1 0 1 1) $ polygon [(-105, 10), (115, 10), (115, 40), (-105, 40)]
+                , menuText (-105, 10) "Medium bot"
+                , color (makeColor 1 0 1 1) $ polygon [(-105, -40), (115, -40), (115, -10), (-105, -10)]
+                , menuText (-105, -40) "Smart bot"]
+worldToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl) 
     | cntBlack + cntWhite == 64 && (cntBlack == cntWhite) = 
         Pictures(
         (insertText (posToPoint (-3, 7)) "DRAW") : (textSave svg) : (insertText (posToPoint (-7, -7)) "Space - back to Menu") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl ))
     | (cntBlack + cntWhite == 64) && (cntBlack < cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "White wins") : (textSave svg) :(insertText (posToPoint (-7, -7)) "Space - back to Menu") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl ))
     | cntBlack + cntWhite == 64 && (cntBlack > cntWhite) = 
         Pictures(
         (insertText (posToPoint (0, 10)) "Black wins") : (textSave svg) :(insertText (posToPoint (-7, -7)) "Space - back to Menu") :
-        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view))
+        boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl ))
     | otherwise = case state of
         Player WhiteMove ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "White") : (insertText (posToPoint (-7, -7)) "Space - back to Menu") :
             (insertTextNumb (posToPoint (-5,5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5,5)) "Black" cntBlack) : (textSave svg) :
-            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view))
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl))
         _ ->
             Pictures(
             (insertText (posToPoint (-3, 7)) "Black") : (insertText (posToPoint (-7, -7)) "Space - back to Menu") :
             (insertTextNumb (posToPoint (-5, 5)) "White" cntWhite) :
             (insertTextNumb (posToPoint (5, 5)) "Black" cntBlack) : (textSave svg) :
-            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view))
+            boardToPicture (World world state (cntBlack, cntWhite) prevW m stg svg stplst view lvl))
 
 --возвращает список картинок, в зависимости от State 
 boardToPicture :: World -> [Picture]
-boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW m stg svg stplst view)              = (addEmptyChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view))
-boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW m stg svg stplst view) = (addBlackChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view))
-boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW m stg svg stplst view) = (addWhiteChecker (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view))
-boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW m stg svg stplst view)       = (addPosChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view))
+boardToPicture (World ((Cell xy Empty) : xs) k cnt prevW m stg svg stplst view lvl)              = (addEmptyChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view lvl))
+boardToPicture (World ((Cell xy (Player BlackMove)) : xs) k cnt prevW m stg svg stplst view lvl) = (addBlackChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view lvl))
+boardToPicture (World ((Cell xy (Player WhiteMove)) : xs) k cnt prevW m stg svg stplst view lvl) = (addWhiteChecker (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view lvl))
+boardToPicture (World ((Cell xy PossibleMove) : xs) k cnt prevW m stg svg stplst view lvl)       = (addPosChecker  (posToPoint xy) m) ++ (boardToPicture (World xs k cnt prevW m stg svg stplst view lvl))
 boardToPicture _ = []
 -- | нарисовать текст "Игра сохранена"
 textSave :: (Maybe World, Int) -> Picture
@@ -90,6 +101,7 @@ handleEvents :: Event -> World -> World
 handleEvents (EventKey (SpecialKey KeySpace) Down _ _) w 
     | gamestate w == View = (fst(stepsList w) !! 0){gamestate = Menu} -- | с помощью пробела можно перейти в режим меню
     | gamestate w == Game = w{gamestate = Menu, stepsList = (w : (fst $ stepsList w), snd $ stepsList w)}
+	| gamestate w == MenuBot = w{gamestate = Menu}
     | otherwise = w
 handleEvents (EventKey (Char 's') Down _ _) w                                  -- | нажав на "s"
     | gamestate w == Game = w{savedGame = (Just w{stepsList = stplst}, 1), stepsList = stplst} -- | в режиме игры мы можем сохранить игру 
@@ -100,13 +112,15 @@ handleEvents (EventKey (Char 's') Down _ _) w                                  -
                     else deleteTail (fst $ stepsList w) (len - (snd $ stepsList w)) 0
         stplst = (stplstlst, length(stplstlst) + 1)
 handleEvents (EventKey (MouseButton LeftButton) Down _ (x, y)) w -- | если нажата левая кнопка мыши 
-    | gamestate w == Game = move (pointToPos (x,y))  w           -- | если мы в режиме игры, проверяем какая часть поля нажта
+	| (gamestate w == Game) && (botlevel w /=0) && (worldPlayer w == (Player BlackMove)) = move (botChoise w) w
+    | gamestate w == Game = move (pointToPos (x,y))  w           -- | если мы в режиме игры, проверяем какая часть поля нажата
     | gamestate w == Menu && fst(savedGame w) /= Nothing &&                                                 -- | если игра сохранена
         x >= -100 && x <= 100 && y >= 10 && y <= 40 = (unJust $ fst (savedGame w)){savedGame = savedGame w } -- | мы можем её загрузить, нажав на "Load game"
     | gamestate w == Menu && fst(savedGame w) /= Nothing &&                                                 -- | если игра сохранена
         x >= -190 && x <= 190 && y >= -40 && y <= -10 = 
         viewGame (fst(stepsList w) !! (length(fst $ stepsList w) - 1)){gamestate = View, savedGame = savedGame w, stepsList = stepsList w, viewed = length(fst $ stepsList w)} 
-    | gamestate w == Menu = analyseMenuClic x y w                          -- | если мы в режиме меню, проверяем какая кнопка нажата
+    | gamestate w == Menu = analyseMenuClick x y w                          -- | если мы в режиме меню, проверяем какая кнопка нажата
+	| gamestate w == MenuBot = analyseMenuBotClick x y w                    -- | То же самое в меню выбора бота
     | otherwise = w
 handleEvents (EventKey (MouseButton RightButton) Down _ _) w = goToBack w   -- | переходим на пред шаг правой кнопкой мыши
 handleEvents (EventKey (SpecialKey KeyRight) Down _ _) w 
@@ -123,7 +137,7 @@ handleEvents _ w | gamestate w == Game = drawPosToMove w -- | если ниче�
 
 -- | откат назад
 goToBack :: World -> World
-goToBack w | gamestate w == Menu || prevWorld w == Nothing || gamestate w == View = w
+goToBack w | gamestate w /= Game || prevWorld w == Nothing || gamestate w == View = w
            | otherwise = (unJust(prevWorld w)){savedGame = (fst(savedGame w), 0)}
 -- | просмотр сохранённой игры
 viewGame :: World -> World
@@ -148,13 +162,15 @@ noMove :: [Cell] -> Bool
 noMove ((Cell _ PossibleMove) : _) = False
 noMove (_:xs) = (noMove xs)
 noMove [] = True
+
 -- передаем ход игрока
 changeTurn :: World -> World
-changeTurn (World cell (Player BlackMove) total prevW m stg svg stplst view) = 
-    (World cell (Player WhiteMove) total prevW m stg svg stplst view)
-changeTurn (World cell (Player WhiteMove) total prevW m stg svg stplst view) = 
-    (World cell (Player BlackMove) total prevW m stg svg stplst view)
+changeTurn (World cell (Player BlackMove) total prevW m stg svg stplst view lvl) = 
+    (World cell (Player WhiteMove) total prevW m stg svg stplst view lvl)
+changeTurn (World cell (Player WhiteMove) total prevW m stg svg stplst view lvl)  =
+    (World cell (Player BlackMove) total prevW m stg svg stplst view lvl)
 changeTurn _ = undefined -- | that's impossible
+
 -- выбрал ли игрок, позицию куда можно ходить?
 checkSelectedPos :: Pos -> [Cell] -> Bool 
 checkSelectedPos p ((Cell p1 state) : xs) 
@@ -164,8 +180,8 @@ checkSelectedPos _ [] = False
 -- помечаем, выбранную игроком, позицию
 -- сохраняем пред World
 markChoosedCell :: Pos -> World -> World 
-markChoosedCell p (World cell turn total prevW m stg svg stplst view) = 
-    (World (markCell p cell turn) turn total (Just (World cell turn total prevW m Game svg stplst view)) m stg svg stplst view)
+markChoosedCell p (World cell turn total prevW m stg svg stplst view lvl) = 
+    (World (markCell p cell turn) turn total (Just (World cell turn total prevW m Game svg stplst view lvl)) m stg svg stplst view lvl)
 -- помечаем, выбранную игроком, позицию
 markCell :: Pos -> [Cell] -> State ->[Cell]
 markCell p ((Cell p1 state) : xs) turn
@@ -182,17 +198,34 @@ delX ((Cell p state) : xs)
     | otherwise = (Cell p state) : (delX xs)
 delX [] = []
 -- | нажатие на кнопки меню
-analyseMenuClic :: Float -> Float -> World -> World
-analyseMenuClic x y w
+analyseMenuClick :: Float -> Float -> World -> World
+analyseMenuClick x y w
     | x >= -105 && x <= 110 && y >= 110 && y <= 140 -- | тут расположена кнопка "Start game"
-                = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game (savedGame w) stplst 0) -- | новая игра с сохранением
+               = w{gamestate = MenuBot}             -- | переход в меню выбора бота
     | x >= -160 && x <= 170 && y >= 60 && y <= 90  -- | "Return to game"
                 = w{gamestate = Game} -- | меняем режим Меню на режим Игра
     | otherwise = w -- | не нажата никакая кнопка
     where
          stplst = if (fst $ savedGame w) == Nothing then ([], 0)
                   else (deleteHead (fst $ stepsList w) (snd $ stepsList w), (snd $ stepsList w))
+				  
+analyseMenuBotClick :: Float -> Float -> World -> World
+analyseMenuBotClick x y w
+    | x >= -105 && x <= 115 && y >= 110 && y <= 140 -- | 2 игрока
+                = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game (savedGame w) stplst 0 0) -- | новая игра с сохранением
+    | x >= -105 && x <= 115 && y >= 60 && y <= 90 -- | изи бот
+                = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game (savedGame w) stplst 0 1) -- | новая игра с сохранением
+	| x >= -105 && x <= 115 && y >= 10 && y <= 40 -- | средний бот
+                = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game (savedGame w) stplst 0 2) -- | новая игра с сохранением
+	| x >= -105 && x <= 115 && y >= -40 && y <= -10 -- | умный бот
+                = (World (createBoard 7 initialLocation) (Player WhiteMove) (2,2) Nothing (-120, -120) Game (savedGame w) stplst 0 3) -- | новая игра с сохранением
+    | otherwise = w -- | не нажата никакая кнопка
+    where
+         stplst = if (fst $ savedGame w) == Nothing then ([], 0)
+                  else (deleteHead (fst $ stepsList w) (snd $ stepsList w), (snd $ stepsList w))
 
+
+				  
 -- :D
 step :: Float -> World -> World
 step _ w = w
@@ -286,3 +319,61 @@ addMousePolygon (x1, y1) (x2, y2) | (areal (x1, y1) (x2, y2)) = color (makeColor
                                   | otherwise = color (makeColor 0 0 0 0) $ polygon [(0, 0)]
     where a = cellWidth * fromIntegral (x1) :: Float
           b = cellHeight * fromIntegral (y1) :: Float
+		  
+-- Выбираем стратегию бота
+botChoise :: World -> Pos
+botChoise w 
+	| botlevel w == 1 = easyBot w
+	| botlevel w == 2 = mediumBot w
+	| botlevel w == 3 = smartBot w
+	|otherwise = (1,1)
+	
+-- Ход простого бота
+easyBot :: World -> Pos
+easyBot w = easyBotFind (worldCells w)
+
+easyBotFind :: [Cell] -> Pos
+easyBotFind ((Cell (x,y) state) :xs)
+	| isStatePossibleMove state = (x,y)
+	| otherwise = easyBotFind xs
+easyBotFind [] = (1,1)
+	
+-- Ход среднего бота
+mediumBot :: World -> Pos
+mediumBot w = mediumBotFind (worldCells w) (mediumBotFindMax (worldCells w) 0 w) w
+
+mediumBotFind :: [Cell] -> Int -> World -> Pos
+mediumBotFind ((Cell (x,y) state) :xs) m w
+	| (isStatePossibleMove state) && (newmax == m) = (x,y)
+	| otherwise = mediumBotFind xs m w
+	where newmax = fst(  worldTotals (move (x,y) w))
+mediumBotFind [] _ _ = (1,1)
+	
+
+mediumBotFindMax :: [Cell] -> Int -> World -> Int
+mediumBotFindMax ((Cell (x,y) state) :xs) m w
+	| (isStatePossibleMove state) && (newmax > m) = mediumBotFindMax xs newmax w
+	| otherwise = mediumBotFindMax xs m w
+	where newmax = fst(  worldTotals (move (x,y) w))
+mediumBotFindMax [] m _ = m
+	
+
+-- Ход унмого бота
+smartBot :: World -> Pos
+smartBot w = smartBotFind (worldCells w) (smartBotFindMax (worldCells w) 0) 
+
+smartBotFind :: [Cell] -> Int  -> Pos
+smartBotFind ((Cell (x,y) state) :xs) m 
+	| (isStatePossibleMove state) && (newmax == m) = (x,y)
+	| otherwise = smartBotFind xs m 
+	where newmax = (abs (x-0)) + (abs (y-0))
+smartBotFind [] _  = (5,5)
+	
+
+smartBotFindMax :: [Cell] -> Int -> Int
+smartBotFindMax ((Cell (x,y) state) :xs) m 
+	| (isStatePossibleMove state) && (newmax > m) = smartBotFindMax xs newmax 
+	| otherwise = smartBotFindMax xs m 
+	where newmax = (abs (x-0)) + (abs (y-0))
+smartBotFindMax [] m  = m
+	

@@ -3,14 +3,14 @@ module GameRecolorCells where
 import Types
 -- перекрашивание клеток                
 reColorLine :: Pos -> World-> World
-reColorLine p (World w turn cnt prevW m stg svg stplst view) = (reColorCell p (cellViaDirection p turn w) (World w turn cnt prevW m stg svg stplst view))
+reColorLine p (World w turn cnt prevW m stg svg stplst view lvl) = (reColorCell p (cellViaDirection p turn w) (World w turn cnt prevW m stg svg stplst view lvl))
 -- перекрашивание клеток, по 1 клетке проверяем
 reColorCell :: Pos -> [(Maybe Pos,Pos)] -> World -> World
-reColorCell p0 (p : ps) (World w state cnt prevW m stg svg stplst view) = reColorCell p0 ps  (World (areCellsBetweenP0P1 p0 p w state) state cnt prevW m stg svg stplst view)
+reColorCell p0 (p : ps) (World w state cnt prevW m stg svg stplst view lvl) = reColorCell p0 ps  (World (areCellsBetweenP0P1 p0 p w state) state cnt prevW m stg svg stplst view lvl)
 reColorCell _ [] w = countCNT w
 -- пересчитывет кол-во черных и белых
 countCNT :: World -> World 
-countCNT (World w state _ prevW m stg svg stplst view) = (World w state (changeCNT w (0, 0)) prevW m stg svg stplst view)
+countCNT (World w state _ prevW m stg svg stplst view lvl) = (World w state (changeCNT w (0, 0)) prevW m stg svg stplst view lvl)
 -- recalculate of total
 changeCNT :: [Cell] -> CountBlackWhite -> CountBlackWhite
 changeCNT ((Cell _ (Player p)) : xs) (cntBlack, cntWhite) = case p of 
